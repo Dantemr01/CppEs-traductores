@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------
+# NetBeans / Ant  -  resultados de compilacion
+# ---------------------------------------------------------------
+build/
+dist/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+# Configuracion local de NetBeans: rutas absolutas de cada maquina.
+# Si se sube, rompe el proyecto en las computadoras de los demas.
+nbproject/private/
+
+# ---------------------------------------------------------------
+# Java
+# ---------------------------------------------------------------
+*.class
+*.jar.md5
+
+# ---------------------------------------------------------------
+# Respaldos que dejan las herramientas
+# ---------------------------------------------------------------
+# JFlex renombra el lexer anterior agregandole una virgulilla
+*.java~
+*~
+*.bak
+*.orig
+
+# ---------------------------------------------------------------
+# Sistema operativo
+# ---------------------------------------------------------------
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---------------------------------------------------------------
+# NOTA SOBRE LOS ARCHIVOS GENERADOS
+#
+# sym.java, ParserCppEs.java y CppLexer.java los producen CUP y JFlex.
+# Por convencion el codigo generado no se versiona, PERO en este caso si
+# se suben a proposito: asi cualquiera que clone el repositorio puede
+# compilar y ejecutar de inmediato, sin tener que instalar JFlex ni correr
+# los generadores. El codigo fuente real de esas clases son los archivos
+# cppes_sintactico.cup y cppes_lexico.jflex, que tambien estan en el
+# repositorio.
+# ---------------------------------------------------------------

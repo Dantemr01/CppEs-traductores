@@ -1,0 +1,8 @@
+/*
+   Errores en la CLASE PRINCIPAL:
+   falta el nombre de la clase.
+*/
+
+#incluir <flujo_es>
+
+clase { };

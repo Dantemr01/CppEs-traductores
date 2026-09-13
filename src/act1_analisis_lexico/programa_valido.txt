@@ -1,0 +1,13 @@
+/*
+   ARCHIVO 1: PROGRAMA VALIDO
+   Cumple con todas las reglas sintacticas de la estructura del archivo:
+   importaciones, espacio de nombres y clase principal, en ese orden.
+*/
+
+#incluir <flujo_es>
+#incluir <cadena_es>
+#incluir "utilerias.hes"
+
+usando espacio_nombres estd::sistema;
+
+clase Estudiante { };

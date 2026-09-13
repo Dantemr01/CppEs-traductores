@@ -1,0 +1,8 @@
+/*
+   Error ESTRUCTURAL FATAL:
+   el archivo comienza con un modificador de acceso, que no puede iniciar
+   ninguna de las estructuras admitidas. No existe regla para resincronizar.
+*/
+publico: entero contador;
+
+clase Tarde { };

@@ -1,0 +1,82 @@
+/*
+  NOMBRES COMPLETOS DEL EQUIPO:
+  1) Larios Hernandez Carlos Alberto
+  2) Macias Renteria Dante Yael
+  3) Salcedo Ramos Luis Gael
+
+  Materia:   Traductores de Lenguaje
+  Profesor:  Jose Navarro Rios
+  Practica:  Analizador Lexico
+  Lenguaje:  C++Es  (C++ con palabras reservadas en espanol)
+
+*/
+package act1_analisis_lexico;
+import java_cup.runtime.*;
+
+/* ================= TERMINALES ================= */
+
+/* --- Directivas del preprocesador --- */
+terminal    DIRECTIVA_INCLUIR, DIRECTIVA_DEFINIR, DIRECTIVA;
+
+/* --- Palabras reservadas: tipos de dato --- */
+terminal    ENTERO, FLOTANTE, DOBLE, CARACTER, BOOLEANO, VACIO, CADENA;
+terminal    LARGO, CORTO, SIN_SIGNO, CON_SIGNO, AUTO, CONSTANTE, ESTATICO;
+terminal    TIPO_DEF, TAMANIO_DE;
+
+/* --- Palabras reservadas: estructuras de control --- */
+terminal    SI, SINO, MIENTRAS, PARA, HACER, SEGUN, CASO, DEFECTO;
+terminal    ROMPER, CONTINUAR, RETORNAR, IR_A;
+
+/* --- Palabras reservadas: orientacion a objetos --- */
+terminal    CLASE, ESTRUCTURA, UNION, ENUMERACION;
+terminal    PUBLICO, PRIVADO, PROTEGIDO, VIRTUAL, AMIGO, ESTE;
+terminal    NUEVO, BORRAR, PLANTILLA, OPERADOR, EN_LINEA;
+terminal    ESPACIO_NOMBRES, USANDO;
+
+/* --- Palabras reservadas: excepciones --- */
+terminal    INTENTAR, CAPTURAR, LANZAR;
+
+/* --- Palabras reservadas: literales del lenguaje --- */
+terminal    VERDADERO, FALSO, NULO;
+
+/* --- Palabras reservadas: entrada / salida y punto de entrada --- */
+terminal    IMPRIMIR, LEER, FIN_LINEA, PRINCIPAL;
+
+/* --- Identificadores --- */
+terminal    IDENTIFICADOR;
+
+/* --- Literales --- */
+terminal    LIT_ENTERO, LIT_ENTERO_HEX, LIT_ENTERO_OCT, LIT_ENTERO_BIN;
+terminal    LIT_FLOTANTE, LIT_CADENA, LIT_CARACTER;
+
+/* --- Operadores de asignacion --- */
+terminal    ASIGNA, MAS_ASIGNA, MENOS_ASIGNA, POR_ASIGNA, ENTRE_ASIGNA;
+terminal    MODULO_ASIGNA, AND_ASIGNA, OR_ASIGNA, XOR_ASIGNA;
+terminal    DESP_IZQ_ASIGNA, DESP_DER_ASIGNA;
+
+/* --- Operadores aritmeticos --- */
+terminal    MAS, MENOS, POR, ENTRE, MODULO, INCREMENTO, DECREMENTO;
+
+/* --- Operadores relacionales --- */
+terminal    IGUAL, DIFERENTE, MENOR, MAYOR, MENOR_IGUAL, MAYOR_IGUAL;
+
+/* --- Operadores logicos --- */
+terminal    AND_LOGICO, OR_LOGICO, NOT_LOGICO;
+
+/* --- Operadores a nivel de bits --- */
+terminal    AND_BIT, OR_BIT, XOR_BIT, NOT_BIT, DESP_IZQ, DESP_DER;
+
+/* --- Simbolos de agrupacion --- */
+terminal    PAR_IZQ, PAR_DER, COR_IZQ, COR_DER, LLAVE_IZQ, LLAVE_DER;
+
+/* --- Signos de puntuacion y acceso --- */
+terminal    COMA, PUNTO_COMA, PUNTO, DOS_PUNTOS, INTERROGACION;
+terminal    FLECHA, RESOLUCION;
+
+/* ================= NO TERMINALES ================= */
+non terminal    inicio;
+
+/* ================= REGLAS GRAMATICALES ================= */
+start with inicio;
+
+inicio ::= ;
