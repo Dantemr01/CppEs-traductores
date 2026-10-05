@@ -1,8 +1,8 @@
 /*
   NOMBRES COMPLETOS DEL EQUIPO:
-  1) Larios Hernandez Carlos Alberto
-  2) Macias Renteria Dante Yael
-  3) Salcedo Ramos Luis Gael
+  1) ...
+  2) ...
+  3) ...
 
   Materia:   Traductores de Lenguaje
   Profesor:  Jose Navarro Rios
@@ -16,7 +16,15 @@
      paquete          -> 'usando' 'espacio_nombres' ubicacion ';'
      ubicacion        -> identificador ( '::' identificador )*
      clase_principal  -> 'clase' identificador cuerpo_clase ';'
-     cuerpo_clase     -> '{' '}'
+     cuerpo_clase     -> '{' (atributo | constante)* '}'
+
+     variable         -> tipo lista_identificadores ('=' valor)? ';'
+     atributo         -> tipo lista_identificadores ('=' valor)? ';'
+     constante        -> 'constante' tipo identificador '=' valor ';'
+     lista_identificadores -> identificador (',' identificador)*
+     tipo             -> 'entero' | 'flotante' | 'doble' | 'caracter'
+                       | 'booleano' | 'cadena' | identificador
+     valor            -> numero | cadena | caracter | booleano | 'nulo'
 
   GESTION DE ERRORES
 
@@ -178,6 +186,14 @@ parser code {:
 
     /* Se invoca desde las producciones que contienen el simbolo 'error',
        una vez que el analizador logro resincronizar.                     */
+    /* Indica que se esperaba en el punto del error. Complementa el mensaje
+       generico de report_error, que CUP emite antes de saber en que regla
+       estaba el analizador.                                              */
+    public void esperaba(String queSeEsperaba, int linea, int columna) {
+        System.out.println("     >> Se esperaba " + queSeEsperaba
+                         + " (linea " + linea + ", columna " + columna + ").");
+    }
+
     public void recuperado(String queSeDescarto) {
         recuperaciones++;
         System.out.println("     >> Recuperacion: se descarto " + queSeDescarto
@@ -215,7 +231,8 @@ parser code {:
             return "solo se admite una clase principal por archivo";
         }
         if (s.sym == sym.PUNTO_COMA) {
-            return "falta la llave de cierre, o hay un punto y coma fuera de lugar";
+            return "la estructura esta incompleta: falta el elemento que deberia "
+                 + "preceder al punto y coma";
         }
         if (s.sym == sym.IDENTIFICADOR) {
             return "se esperaba otra estructura: revise si falta un delimitador o una palabra reservada";
@@ -227,6 +244,15 @@ parser code {:
 /* ==================================================================
    TERMINALES
    ================================================================== */
+
+/* --- Terminal ficticio: no lo produce el analizador lexico.
+       Existe solo para dar al menos unario (-x) una precedencia distinta
+       de la del menos binario (a - b), mediante %prec NEGATIVO.      --- */
+terminal          NEGATIVO;
+
+/* --- Otro terminal ficticio: da a la seleccion simple una precedencia
+       menor que la de 'sino', para resolver el 'sino colgante'.      --- */
+terminal          SIN_SINO;
 
 /* --- Directivas del preprocesador --- */
 terminal String  INCLUIR, RUTA_INCLUSION, DIRECTIVA_DEFINIR, DIRECTIVA;
@@ -291,7 +317,57 @@ terminal String  RESOLUCION;
 
 non terminal          archivo, lista_importaciones, importacion;
 non terminal          paquete_opcional, paquete, clase_principal, cuerpo_clase;
-non terminal String   ubicacion;
+non terminal          lista_globales, variable, constante_global;
+non terminal          miembro, atributo, constante_decl;
+non terminal String   ubicacion, tipo, lista_identificadores, valor;
+non terminal Integer  lista_miembros, cuerpo_metodo;
+non terminal          metodo, lectura, escritura, asignacion;
+non terminal String   expresion, elemento, lista_elementos;
+
+/* --- Estructuras de control --- */
+non terminal          seleccion_simple, seleccion_doble, seleccion_multiple;
+non terminal          ciclo_mientras, ciclo_hacer_mientras, ciclo_para;
+non terminal          caso, defecto, defecto_opcional;
+non terminal String   condicion, asignacion_simple;
+non terminal Integer  lista_casos;
+
+/* Estos devuelven CUANTAS estructuras de control contienen directamente.
+   Es lo que permite detectar el anidamiento sin inspeccionar el arbol. */
+non terminal Integer  sentencia, lista_sentencias, bloque, cuerpo_caso;
+
+/* ==================================================================
+   PRECEDENCIA Y ASOCIATIVIDAD DE LOS OPERADORES
+
+   El enunciado plantea las expresiones con dos no terminales paralelos,
+   expresion_aritmetica y expresion_logica, y ambos pueden derivar un
+   identificador suelto. Escrita asi, la gramatica es AMBIGUA: ante
+   "a" el analizador no puede decidir cual de los dos aplicar, y CUP
+   reporta decenas de conflictos.
+
+   La solucion estandar es una sola regla 'expresion' con las
+   precedencias declaradas. Las lineas de abajo van de MENOR a MAYOR
+   prioridad, que es el orden que exige CUP, y reproducen la precedencia
+   real de C++: los operadores logicos se evaluan despues que los
+   aritmeticos, y la multiplicacion antes que la suma.
+   ================================================================== */
+/* El 'sino colgante': ante  si (c) bloque . sino  el analizador puede
+   reducir la seleccion simple o desplazar el 'sino' de la doble. Aqui
+   el conflicto lo provoca la produccion de error  sentencia ::= SINO
+   bloque, que mete SINO en el conjunto SIGUIENTE de sentencia. Dar a
+   'sino' mayor precedencia que a la seleccion simple hace que gane el
+   desplazamiento, que es el comportamiento correcto: el 'sino' siempre
+   se asocia al 'si' mas cercano.                                      */
+precedence nonassoc SIN_SINO;
+precedence nonassoc SINO;
+
+precedence left  OR_LOGICO;
+precedence left  AND_LOGICO;
+precedence left  IGUAL, DIFERENTE;
+precedence left  MENOR, MAYOR, MENOR_IGUAL, MAYOR_IGUAL;
+precedence left  MAS, MENOS;
+precedence left  POR, ENTRE, MODULO;
+precedence right NOT_LOGICO;
+precedence right NEGATIVO;
 
 /* ==================================================================
    REGLAS GRAMATICALES
@@ -304,8 +380,48 @@ start with archivo;
 
    Sin produccion de 'error': es lo que hace posible el error FATAL.
    ------------------------------------------------------------------ */
-archivo ::= lista_importaciones paquete_opcional clase_principal
+archivo ::= lista_importaciones paquete_opcional lista_globales clase_principal
             {: parser.finalizado(); :}
+;
+
+/* ------------------------------------------------------------------
+   Variables globales: declaradas fuera de la clase.
+   Es lo que distingue una VARIABLE de un ATRIBUTO: en C++ la forma
+   sintactica es identica, y lo unico que cambia es el ambito en el que
+   aparece. Por eso son producciones distintas con el mismo cuerpo.
+   ------------------------------------------------------------------ */
+lista_globales ::= lista_globales variable
+                 | lista_globales constante_global
+                 | /* vacio */
+;
+
+/* Constante declarada fuera de la clase. */
+constante_global ::= CONSTANTE:c tipo:t IDENTIFICADOR:id ASIGNA valor:v PUNTO_COMA
+                     {: parser.ok("Declaracion de constante global reconocida: "
+                                  + t + " " + id + " = " + v, cleft, cright); :}
+
+                   /* ERROR RECUPERABLE: constante sin inicializacion */
+                   | CONSTANTE:c tipo:t IDENTIFICADOR:id PUNTO_COMA
+                     {: parser.reportarError(
+                            "la constante global " + id + " debe inicializarse en su declaracion",
+                            cleft, cright, sym.CONSTANTE, "constante");
+                        parser.recuperado("la constante global sin valor de inicializacion"); :}
+;
+
+variable ::= tipo:t lista_identificadores:ids PUNTO_COMA
+             {: parser.ok("Declaracion de variable reconocida: " + t + " " + ids,
+                          tleft, tright); :}
+
+           | tipo:t lista_identificadores:ids ASIGNA valor:v PUNTO_COMA
+             {: parser.ok("Inicializacion de variable reconocida: "
+                          + t + " " + ids + " = " + v, tleft, tright); :}
+
+           /* ERROR RECUPERABLE: declaracion incompleta */
+           | tipo:t PUNTO_COMA:pc
+             {: parser.reportarError(
+                    "declaracion invalida: falta el identificador de la variable",
+                    pcleft, pcright, sym.PUNTO_COMA, ";");
+                parser.recuperado("la declaracion de variable incompleta"); :}
 ;
 
 /* ---- importacion* (cero o mas) ---- */
@@ -405,10 +521,531 @@ clase_principal ::= CLASE:c IDENTIFICADOR:id cuerpo_clase PUNTO_COMA
 /* ------------------------------------------------------------------
    cuerpo_clase -> '{' '}'
    ------------------------------------------------------------------ */
-cuerpo_clase ::= LLAVE_IZQ:a LLAVE_DER
-                 {: parser.ok("Estructura de llaves valida", aleft, aright); :}
+cuerpo_clase ::= LLAVE_IZQ:a lista_miembros:n LLAVE_DER
+                 {: parser.ok("Estructura de llaves valida", aleft, aright);
+                    if (n.intValue() == 0) {
+                        parser.ok("Clase vacia: no declara miembros", aleft, aright);
+                    } else {
+                        parser.ok("Clase con miembros: " + n + " declaracion(es)",
+                                  aleft, aright);
+                    } :}
 
-               /* ERROR RECUPERABLE: falta la llave de cierre. */
-               | LLAVE_IZQ:a error
-                 {: parser.recuperado("el cuerpo de clase sin llave de cierre"); :}
+               /* ERROR RECUPERABLE: falta la llave de cierre.
+                  No se usa el simbolo 'error' aqui porque chocaria con la
+                  produccion  miembro ::= error PUNTO_COMA, que tambien puede
+                  desplazar 'error' en este mismo punto. Una produccion
+                  explicita evita el conflicto y da un mensaje mas preciso.  */
+               | LLAVE_IZQ:a lista_miembros
+                 {: parser.reportarError(
+                        "falta la llave de cierre del cuerpo de la clase",
+                        aleft, aright, sym.LLAVE_IZQ, "{");
+                    parser.recuperado("el cuerpo de clase sin llave de cierre"); :}
+;
+
+/* ------------------------------------------------------------------
+   cuerpo_clase -> ( atributo | constante )*
+   El no terminal devuelve cuantos miembros se declararon, para poder
+   distinguir una clase vacia de una clase con miembros.
+   ------------------------------------------------------------------ */
+lista_miembros ::= lista_miembros:l miembro
+                   {: RESULT = Integer.valueOf(l.intValue() + 1); :}
+
+                 | /* vacio */
+                   {: RESULT = Integer.valueOf(0); :}
+;
+
+miembro ::= atributo
+          | constante_decl
+          | metodo
+
+          /* ERROR RECUPERABLE: miembro irreconocible.
+             El punto y coma actua como punto de sincronizacion. */
+          | error PUNTO_COMA
+            {: parser.recuperado("el miembro de clase mal declarado"); :}
+;
+
+/* ------------------------------------------------------------------
+   atributo -> tipo lista_identificadores ('=' valor)? ';'
+   ------------------------------------------------------------------ */
+atributo ::= tipo:t lista_identificadores:ids PUNTO_COMA
+             {: parser.ok("Declaracion de atributo reconocida: " + t + " " + ids,
+                          tleft, tright); :}
+
+           | tipo:t lista_identificadores:ids ASIGNA valor:v PUNTO_COMA
+             {: parser.ok("Declaracion de atributo con inicializacion: "
+                          + t + " " + ids + " = " + v, tleft, tright); :}
+
+           /* ERROR RECUPERABLE: falta el identificador */
+           | tipo:t PUNTO_COMA:pc
+             {: parser.reportarError(
+                    "declaracion invalida: falta el identificador del atributo",
+                    pcleft, pcright, sym.PUNTO_COMA, ";");
+                parser.recuperado("la declaracion de atributo incompleta"); :}
+
+           /* ERROR RECUPERABLE: falta el valor despues del signo igual */
+           | tipo:t lista_identificadores:ids ASIGNA:eq PUNTO_COMA
+             {: parser.reportarError(
+                    "falta el valor de inicializacion despues del signo igual",
+                    eqleft, eqright, sym.ASIGNA, "=");
+                parser.recuperado("la inicializacion sin valor"); :}
+;
+
+/* ------------------------------------------------------------------
+   constante -> 'constante' tipo identificador '=' valor ';'
+   A diferencia del atributo, el valor de inicializacion es OBLIGATORIO.
+   ------------------------------------------------------------------ */
+constante_decl ::= CONSTANTE:c tipo:t IDENTIFICADOR:id ASIGNA valor:v PUNTO_COMA
+                   {: parser.ok("Declaracion de constante reconocida: "
+                                + t + " " + id + " = " + v, cleft, cright); :}
+
+                 /* ERROR RECUPERABLE: constante sin inicializacion */
+                 | CONSTANTE:c tipo:t IDENTIFICADOR:id PUNTO_COMA
+                   {: parser.reportarError(
+                          "la constante " + id + " debe inicializarse en su declaracion",
+                          cleft, cright, sym.CONSTANTE, "constante");
+                      parser.recuperado("la constante sin valor de inicializacion"); :}
+;
+
+/* ------------------------------------------------------------------
+   lista_identificadores -> identificador (',' identificador)*
+   ------------------------------------------------------------------ */
+lista_identificadores ::= IDENTIFICADOR:id
+                          {: RESULT = id; :}
+
+                        | lista_identificadores:l COMA IDENTIFICADOR:id
+                          {: RESULT = l + ", " + id; :}
+
+                        /* ERROR RECUPERABLE: coma duplicada -> leer(a, , b) */
+                        | lista_identificadores:l COMA COMA:c IDENTIFICADOR:id
+                          {: RESULT = l + ", " + id;
+                             parser.reportarError("hay una coma duplicada en la lista",
+                                                  cleft, cright, sym.COMA, ",");
+                             parser.recuperado("la coma sobrante"); :}
+
+                        /* ERROR RECUPERABLE: falta la coma separadora */
+                        | lista_identificadores:l IDENTIFICADOR:id
+                          {: RESULT = l + ", " + id;
+                             parser.reportarError(
+                                 "falta una coma entre los identificadores",
+                                 idleft, idright, sym.IDENTIFICADOR, id);
+                             parser.recuperado("la coma faltante"); :}
+;
+
+/* ------------------------------------------------------------------
+   tipo -> tipo primitivo | identificador (tipo definido por el usuario)
+   ------------------------------------------------------------------ */
+tipo ::= ENTERO:x   {: RESULT = x; :}
+       | FLOTANTE:x {: RESULT = x; :}
+       | DOBLE:x    {: RESULT = x; :}
+       | CARACTER:x {: RESULT = x; :}
+       | BOOLEANO:x {: RESULT = x; :}
+       | CADENA:x   {: RESULT = x; :}
+       | VACIO:x    {: RESULT = x; :}
+       | IDENTIFICADOR:x {: RESULT = x; :}
+;
+
+/* ------------------------------------------------------------------
+   valor -> numero | cadena | caracter | booleano | nulo
+   ------------------------------------------------------------------ */
+valor ::= LIT_ENTERO:x       {: RESULT = x; :}
+        | LIT_ENTERO_HEX:x   {: RESULT = x; :}
+        | LIT_ENTERO_OCT:x   {: RESULT = x; :}
+        | LIT_ENTERO_BIN:x   {: RESULT = x; :}
+        | LIT_FLOTANTE:x     {: RESULT = x; :}
+        | LIT_CADENA:x       {: RESULT = x; :}
+        | LIT_CARACTER:x     {: RESULT = x; :}
+        | VERDADERO:x        {: RESULT = x; :}
+        | FALSO:x            {: RESULT = x; :}
+        | NULO:x             {: RESULT = x; :}
+;
+
+/* ==================================================================
+   METODOS Y SENTENCIAS
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   metodo -> tipo identificador '(' ')' '{' cuerpo_metodo '}'
+
+   No hay conflicto con  atributo ::= tipo lista_identificadores ...
+   porque tras "tipo IDENTIFICADOR" el parentesis de apertura no
+   pertenece al conjunto SIGUIENTE de lista_identificadores: con un
+   solo token de anticipacion basta para distinguirlos.
+   ------------------------------------------------------------------ */
+metodo ::= tipo:t IDENTIFICADOR:id PAR_IZQ PAR_DER LLAVE_IZQ cuerpo_metodo:n LLAVE_DER
+           {: parser.ok("Metodo reconocido: " + t + " " + id + "() con "
+                        + n + " sentencia(s)", tleft, tright); :}
+;
+
+/* ---- cuerpo_metodo -> (sentencia)* ---- */
+cuerpo_metodo ::= cuerpo_metodo:c sentencia
+                  {: RESULT = Integer.valueOf(c.intValue() + 1); :}
+                | /* vacio */
+                  {: RESULT = Integer.valueOf(0); :}
+;
+
+sentencia ::= lectura     {: RESULT = Integer.valueOf(0); :}
+            | escritura   {: RESULT = Integer.valueOf(0); :}
+            | asignacion  {: RESULT = Integer.valueOf(0); :}
+
+            /* ---- Estructuras de control: cuentan como 1 para el anidamiento ---- */
+            | seleccion_simple    {: RESULT = Integer.valueOf(1); :}
+            | seleccion_doble     {: RESULT = Integer.valueOf(1); :}
+            | seleccion_multiple  {: RESULT = Integer.valueOf(1); :}
+            | ciclo_mientras      {: RESULT = Integer.valueOf(1); :}
+            | ciclo_hacer_mientras {: RESULT = Integer.valueOf(1); :}
+            | ciclo_para          {: RESULT = Integer.valueOf(1); :}
+
+            /* ---- Interrupcion de un caso ---- */
+            | ROMPER:rp PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.ok("Sentencia de interrupcion reconocida: romper",
+                           rpleft, rpright); :}
+
+            /* ERROR RECUPERABLE: 'sino' suelto, sin un 'si' que lo preceda */
+            | SINO:s bloque
+              {: RESULT = Integer.valueOf(0);
+                 parser.reportarError(
+                     "'sino' no puede aparecer sin una estructura 'si' asociada",
+                     sleft, sright, sym.SINO, "sino");
+                 parser.recuperado("el 'sino' sin 'si' asociado"); :}
+
+            /* ERROR RECUPERABLE: sentencia irreconocible.
+               El punto y coma actua como punto de sincronizacion. */
+            | error PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.recuperado("la sentencia mal formada"); :}
+;
+
+/* ------------------------------------------------------------------
+   lectura -> 'leer' '(' lista_identificadores ')' ';'
+   ------------------------------------------------------------------ */
+lectura ::= LEER:l PAR_IZQ lista_identificadores:ids PAR_DER PUNTO_COMA
+            {: parser.ok("Sentencia de lectura reconocida: leer(" + ids + ")",
+                         lleft, lright); :}
+
+          /* ERROR RECUPERABLE: contenido invalido dentro del parentesis */
+          | LEER:l PAR_IZQ error PAR_DER PUNTO_COMA
+            {: parser.recuperado("la lista de identificadores invalida de la lectura"); :}
+;
+
+/* ------------------------------------------------------------------
+   escritura -> 'imprimir' '(' lista_elementos ')' ';'
+   'imprimir' es el equivalente de 'escribir' en C++Es.
+   ------------------------------------------------------------------ */
+escritura ::= IMPRIMIR:e PAR_IZQ lista_elementos:els PAR_DER PUNTO_COMA
+              {: parser.ok("Sentencia de escritura reconocida: imprimir(" + els + ")",
+                           eleft, eright); :}
+
+            /* ERROR RECUPERABLE: falta el parentesis de cierre */
+            | IMPRIMIR PAR_IZQ lista_elementos:els PUNTO_COMA:pc
+              {: parser.reportarError(
+                     "falta el parentesis de cierre en la sentencia de escritura",
+                     pcleft, pcright, sym.PUNTO_COMA, ";");
+                 parser.recuperado("el parentesis de cierre faltante"); :}
+
+            /* ERROR RECUPERABLE: contenido invalido dentro del parentesis */
+            | IMPRIMIR:e PAR_IZQ error PAR_DER PUNTO_COMA
+              {: parser.recuperado("la lista de elementos invalida de la escritura"); :}
+;
+
+/* ---- lista_elementos -> elemento (',' elemento)* ---- */
+lista_elementos ::= elemento:e
+                    {: RESULT = e; :}
+
+                  | lista_elementos:l COMA elemento:e
+                    {: RESULT = l + ", " + e; :}
+
+                  /* ERROR RECUPERABLE: coma duplicada */
+                  | lista_elementos:l COMA COMA:c elemento:e
+                    {: RESULT = l + ", " + e;
+                       parser.reportarError("hay una coma duplicada en la lista",
+                                            cleft, cright, sym.COMA, ",");
+                       parser.recuperado("la coma sobrante"); :}
+
+                  /* ERROR RECUPERABLE: falta el primer elemento.
+                     Se escribe como CASO BASE y no como regla recursiva
+                     (COMA lista_elementos), porque esa forma choca con la
+                     recursion por la izquierda de las otras dos y produce
+                     un conflicto shift/reduce bajo el simbolo COMA.      */
+                  | COMA:c elemento:e
+                    {: RESULT = e;
+                       parser.reportarError(
+                           "falta el elemento antes de la coma en la lista",
+                           cleft, cright, sym.COMA, ",");
+                       parser.recuperado("la coma inicial sin elemento"); :}
+;
+
+/* ---- elemento -> identificador | valor | cadena | expresion ----
+   Las tres primeras alternativas del enunciado ya estan contenidas en
+   'expresion', asi que declararlas por separado haria la gramatica
+   ambigua. Se deja una sola alternativa.                              */
+elemento ::= expresion:e {: RESULT = e; :}
+;
+
+/* ------------------------------------------------------------------
+   asignacion -> identificador '=' expresion ';'
+   ------------------------------------------------------------------ */
+/* Sin punto y coma: es la forma que necesitan las secciones de
+   inicializacion y actualizacion del ciclo 'para'. */
+asignacion_simple ::= IDENTIFICADOR:id ASIGNA expresion:e
+                      {: RESULT = id + " = " + e; :}
+;
+
+asignacion ::= asignacion_simple:a PUNTO_COMA
+               {: parser.ok("Asignacion reconocida: " + a, aleft, aright); :}
+
+             /* ERROR RECUPERABLE: falta el identificador destino */
+             | ASIGNA:a expresion:e PUNTO_COMA
+               {: parser.reportarError(
+                      "falta el identificador a la izquierda del signo igual",
+                      aleft, aright, sym.ASIGNA, "=");
+                  parser.recuperado("la asignacion sin destino"); :}
+
+             /* ERROR RECUPERABLE: expresion invalida a la derecha */
+             | IDENTIFICADOR:id ASIGNA error PUNTO_COMA
+               {: parser.recuperado("la expresion invalida de la asignacion"); :}
+;
+
+/* ==================================================================
+   EXPRESIONES ARITMETICAS Y LOGICAS
+
+   Una sola regla recursiva. La precedencia declarada arriba es la que
+   decide como se agrupan los operadores, de modo que  a + b * c  se
+   interpreta como  a + (b * c)  sin necesidad de escribir niveles de
+   no terminales.
+   ================================================================== */
+expresion ::= expresion:a MAS:o expresion:b
+              {: RESULT = a + " + " + b;
+                 parser.ok("Expresion aritmetica reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a MENOS:o expresion:b
+              {: RESULT = a + " - " + b;
+                 parser.ok("Expresion aritmetica reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a POR:o expresion:b
+              {: RESULT = a + " * " + b;
+                 parser.ok("Expresion aritmetica reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a ENTRE:o expresion:b
+              {: RESULT = a + " / " + b;
+                 parser.ok("Expresion aritmetica reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a MODULO:o expresion:b
+              {: RESULT = a + " % " + b;
+                 parser.ok("Expresion aritmetica reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a AND_LOGICO:o expresion:b
+              {: RESULT = a + " && " + b;
+                 parser.ok("Expresion logica reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a OR_LOGICO:o expresion:b
+              {: RESULT = a + " || " + b;
+                 parser.ok("Expresion logica reconocida: " + RESULT, oleft, oright); :}
+
+            | NOT_LOGICO:o expresion:a
+              {: RESULT = "!" + a;
+                 parser.ok("Expresion logica reconocida: " + RESULT, oleft, oright); :}
+
+            /* Menos unario: -x. %prec le da la prioridad de NEGATIVO en
+               lugar de la del menos binario. En CUP el %prec se escribe
+               DESPUES del bloque de accion, no antes.                   */
+            | MENOS expresion:a
+              {: RESULT = "-" + a; :} %prec NEGATIVO
+
+            | PAR_IZQ expresion:a PAR_DER
+              {: RESULT = "(" + a + ")"; :}
+
+            | IDENTIFICADOR:x  {: RESULT = x; :}
+            | valor:x          {: RESULT = x; :}
+;
+
+/* ==================================================================
+   ESTRUCTURAS DE CONTROL
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   bloque -> '{' (sentencia)* '}'
+
+   Devuelve cuantas estructuras de control contiene directamente, que es
+   lo que permite detectar el anidamiento sin recorrer el arbol.
+   ------------------------------------------------------------------ */
+bloque ::= LLAVE_IZQ:a lista_sentencias:n LLAVE_DER
+           {: RESULT = n;
+              parser.ok("Bloque reconocido: " + n
+                        + " estructura(s) de control anidada(s)", aleft, aright); :}
+;
+
+lista_sentencias ::= lista_sentencias:l sentencia:s
+                     {: RESULT = Integer.valueOf(l.intValue() + s.intValue()); :}
+                   | /* vacio */
+                     {: RESULT = Integer.valueOf(0); :}
+;
+
+/* ------------------------------------------------------------------
+   condicion -> expresion
+
+   La condicion reutiliza la regla de expresion de la practica anterior,
+   que ya cubre identificadores, valores, aritmetica, logica, parentesis
+   y, desde esta practica, los operadores relacionales. Una condicion
+   simple y una compuesta son por tanto la misma regla: lo que cambia es
+   cuantos operadores se aplican.
+   ------------------------------------------------------------------ */
+condicion ::= expresion:e
+              {: RESULT = e;
+                 parser.ok("Condicion reconocida: " + e, eleft, eright); :}
+;
+
+/* ------------------------------------------------------------------
+   seleccion_simple -> 'si' '(' condicion ')' bloque
+   ------------------------------------------------------------------ */
+seleccion_simple ::= SI:s PAR_IZQ condicion:c PAR_DER bloque:n
+                     {: parser.ok("Seleccion simple reconocida: si (" + c + ")",
+                                  sleft, sright);
+                        if (n.intValue() > 0) {
+                            parser.ok("Estructura anidada reconocida dentro del 'si'",
+                                      sleft, sright);
+                        } :} %prec SIN_SINO
+
+                   /* ERROR RECUPERABLE: condicion sin parentesis.
+                      Se usa el simbolo 'error' y no una produccion
+                      explicita como  SI condicion bloque, porque esa forma
+                      seria ambigua: la condicion puede empezar ella misma
+                      con un parentesis, y el analizador no podria decidir
+                      si ese parentesis es el de la estructura o el de la
+                      expresion.                                          */
+                   | SI:s error bloque
+                     {: parser.esperaba("'(' despues de 'si'", sleft, sright);
+                        parser.recuperado("la condicion mal delimitada del 'si'"); :}
+;
+
+/* ------------------------------------------------------------------
+   seleccion_doble -> 'si' '(' condicion ')' bloque 'sino' bloque
+
+   No hay conflicto de 'sino colgante' porque las llaves del bloque son
+   obligatorias: 'sino' nunca puede seguir a una sentencia suelta.
+   ------------------------------------------------------------------ */
+seleccion_doble ::= SI:s PAR_IZQ condicion:c PAR_DER bloque:n1 SINO bloque:n2
+                    {: parser.ok("Seleccion doble reconocida: si (" + c + ") ... sino",
+                                 sleft, sright);
+                       if (n1.intValue() + n2.intValue() > 0) {
+                           parser.ok("Estructura anidada reconocida dentro del 'si/sino'",
+                                     sleft, sright);
+                       } :}
+;
+
+/* ------------------------------------------------------------------
+   seleccion_multiple -> 'segun' '(' expresion ')' '{' lista_casos defecto? '}'
+   ------------------------------------------------------------------ */
+seleccion_multiple ::= SEGUN:g PAR_IZQ expresion:e PAR_DER
+                       LLAVE_IZQ lista_casos:n defecto_opcional LLAVE_DER
+                       {: parser.ok("Seleccion multiple reconocida: segun (" + e
+                                    + ") con " + n + " caso(s)", gleft, gright); :}
+;
+
+lista_casos ::= lista_casos:l caso
+                {: RESULT = Integer.valueOf(l.intValue() + 1); :}
+              | caso
+                {: RESULT = Integer.valueOf(1); :}
+;
+
+caso ::= CASO:c valor:v DOS_PUNTOS cuerpo_caso
+         {: parser.ok("Caso reconocido: caso " + v, cleft, cright); :}
+
+       /* ERROR RECUPERABLE: falta el valor del caso */
+       | CASO:c DOS_PUNTOS cuerpo_caso
+         {: parser.reportarError("se esperaba un valor despues de 'caso'",
+                                 cleft, cright, sym.CASO, "caso");
+            parser.recuperado("el caso sin valor"); :}
+;
+
+defecto_opcional ::= defecto
+                   | /* vacio */
+;
+
+defecto ::= DEFECTO:d DOS_PUNTOS cuerpo_caso
+            {: parser.ok("Alternativa por defecto reconocida", dleft, dright); :}
+;
+
+cuerpo_caso ::= lista_sentencias:n {: RESULT = n; :}
+;
+
+/* ------------------------------------------------------------------
+   ciclo_mientras -> 'mientras' '(' condicion ')' bloque
+   ------------------------------------------------------------------ */
+ciclo_mientras ::= MIENTRAS:m PAR_IZQ condicion:c PAR_DER bloque:n
+                   {: parser.ok("Ciclo mientras reconocido: mientras (" + c + ")",
+                                mleft, mright);
+                      if (n.intValue() > 0) {
+                          parser.ok("Estructura anidada reconocida dentro del 'mientras'",
+                                    mleft, mright);
+                      } :}
+
+                 /* ERROR RECUPERABLE: falta el parentesis de cierre */
+                 | MIENTRAS:m PAR_IZQ condicion:c bloque:n
+                   {: parser.reportarError(
+                          "se esperaba ')' para cerrar la condicion del ciclo mientras",
+                          nleft, nright, sym.LLAVE_IZQ, "{");
+                      parser.recuperado("el parentesis de cierre faltante"); :}
+;
+
+/* ------------------------------------------------------------------
+   ciclo_hacer_mientras -> 'hacer' bloque 'mientras' '(' condicion ')' ';'
+   ------------------------------------------------------------------ */
+ciclo_hacer_mientras ::= HACER:h bloque:n MIENTRAS PAR_IZQ condicion:c PAR_DER PUNTO_COMA
+                         {: parser.ok("Ciclo hacer-mientras reconocido: hacer ... mientras ("
+                                      + c + ")", hleft, hright);
+                            if (n.intValue() > 0) {
+                                parser.ok("Estructura anidada reconocida dentro del 'hacer'",
+                                          hleft, hright);
+                            } :}
+;
+
+/* ------------------------------------------------------------------
+   ciclo_para -> 'para' '(' inicializacion ';' condicion ';' actualizacion ')' bloque
+   ------------------------------------------------------------------ */
+ciclo_para ::= PARA:p PAR_IZQ asignacion_simple:ini PUNTO_COMA condicion:c
+               PUNTO_COMA asignacion_simple:act PAR_DER bloque:n
+               {: parser.ok("Ciclo para reconocido: para (" + ini + "; " + c
+                            + "; " + act + ")", pleft, pright);
+                  if (n.intValue() > 0) {
+                      parser.ok("Estructura anidada reconocida dentro del 'para'",
+                                pleft, pright);
+                  } :}
+
+             /* ERROR RECUPERABLE: falta la seccion de actualizacion */
+             | PARA:p PAR_IZQ asignacion_simple:ini PUNTO_COMA condicion:c PAR_DER:pd bloque:n
+               {: parser.reportarError(
+                      "se esperaba la seccion de actualizacion del ciclo 'para'",
+                      pdleft, pdright, sym.PAR_DER, ")");
+                  parser.recuperado("el ciclo 'para' sin actualizacion"); :}
+;
+
+/* ==================================================================
+   OPERADORES RELACIONALES
+   Se agregan a la regla 'expresion' para que una condicion pueda ser
+   simple (a > b) o compuesta (a > b && activo) sin reglas aparte.
+   ================================================================== */
+expresion ::= expresion:a MENOR:o expresion:b
+              {: RESULT = a + " < " + b;
+                 parser.ok("Expresion relacional reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a MAYOR:o expresion:b
+              {: RESULT = a + " > " + b;
+                 parser.ok("Expresion relacional reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a MENOR_IGUAL:o expresion:b
+              {: RESULT = a + " <= " + b;
+                 parser.ok("Expresion relacional reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a MAYOR_IGUAL:o expresion:b
+              {: RESULT = a + " >= " + b;
+                 parser.ok("Expresion relacional reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a IGUAL:o expresion:b
+              {: RESULT = a + " == " + b;
+                 parser.ok("Expresion relacional reconocida: " + RESULT, oleft, oright); :}
+
+            | expresion:a DIFERENTE:o expresion:b
+              {: RESULT = a + " != " + b;
+                 parser.ok("Expresion relacional reconocida: " + RESULT, oleft, oright); :}
 ;

@@ -1,0 +1,58 @@
+/*
+   EJECUCION 4: COMBINACION DE TODO
+   Lecturas, escrituras, asignaciones, condiciones simples y compuestas,
+   ciclos, expresiones aritmeticas y logicas, anidamiento y errores.
+   Cada error va seguido de una estructura valida.
+*/
+
+#incluir <flujo_es>
+
+clase Integracion {
+
+    entero a, b, contador, i;
+    booleano activo;
+
+    vacio ejecutar() {
+
+        leer(a);
+        leer(b, contador);
+
+        total = a + b * 2;
+
+        activo = a > b && contador < 10;
+
+        si (activo) {
+            imprimir("Activo");
+        }
+
+        si edad >= 18 {
+            imprimir("Error de parentesis");
+        }
+
+        si (a > b) {
+            mayor = a;
+        } sino {
+            mayor = b;
+        }
+
+        mientras (contador < 10 {
+            contador = contador + 1;
+        }
+
+        para (i = 0; i < 5; i = i + 1) {
+            si (i % 2 == 0) {
+                imprimir("Par", i);
+            } sino {
+                imprimir("Impar", i);
+            }
+        }
+
+        hacer {
+            contador = contador - 1;
+        } mientras (contador > 0);
+
+        imprimir("Fin del proceso");
+
+    }
+
+};

@@ -1,0 +1,31 @@
+/*
+   EJECUCION 1: CODIGO VALIDO
+   Cubre atributo sin inicializacion, atributo inicializado, declaracion
+   multiple, constantes inicializadas y distintos tipos de dato.
+*/
+
+#incluir <flujo_es>
+
+usando espacio_nombres estd;
+
+clase Persona {
+
+    entero edad;
+
+    cadena nombre, apellido, correo;
+
+    flotante salario = 5000;
+
+    doble estatura = 1.75;
+
+    caracter inicial = 'P';
+
+    booleano activo = verdadero;
+
+    constante doble PI = 3.1416;
+
+    constante entero MAXIMO = 100;
+
+    constante cadena SALUDO = "Hola";
+
+};

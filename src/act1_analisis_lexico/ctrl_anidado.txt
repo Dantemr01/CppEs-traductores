@@ -1,0 +1,56 @@
+/*
+   EJECUCION 2: ESTRUCTURAS ANIDADAS
+   Demuestra que el analizador conserva la jerarquia:
+       para -> si -> mientras
+                  -> sino
+*/
+
+#incluir <flujo_es>
+
+clase Anidamiento {
+
+    entero i, contador;
+    booleano activo;
+
+    vacio ejecutar() {
+
+        /* selectiva dentro de selectiva */
+        si (i > 0) {
+            si (contador > 0) {
+                imprimir("Ambos positivos");
+            }
+        }
+
+        /* ciclo dentro de selectiva */
+        si (activo) {
+            mientras (contador < 10) {
+                imprimir(contador);
+                contador = contador + 1;
+            }
+        }
+
+        /* selectiva dentro de ciclo */
+        mientras (contador < 10) {
+            si (contador % 2 == 0) {
+                imprimir("Par");
+            } sino {
+                imprimir("Impar");
+            }
+            contador = contador + 1;
+        }
+
+        /* tres niveles: para -> si -> mientras */
+        para (i = 0; i < 10; i = i + 1) {
+            si (i % 2 == 0) {
+                mientras (contador < 5) {
+                    imprimir(i, contador);
+                    contador = contador + 1;
+                }
+            } sino {
+                imprimir("Numero impar");
+            }
+        }
+
+    }
+
+};

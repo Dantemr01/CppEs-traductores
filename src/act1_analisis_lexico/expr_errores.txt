@@ -1,0 +1,26 @@
+/*
+   EJECUCION 2: CODIGO INVALIDO
+   Los seis errores que pide el enunciado.
+*/
+
+#incluir <flujo_es>
+
+clase Proceso {
+
+    vacio ejecutar() {
+
+        leer(a b);
+
+        total = a + ;
+
+        = a + b;
+
+        leer(a, , b);
+
+        imprimir(, a);
+
+        imprimir("Inicio";
+
+    }
+
+};

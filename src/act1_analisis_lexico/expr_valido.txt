@@ -1,0 +1,40 @@
+/*
+   EJECUCION 1: CODIGO VALIDO
+   Lecturas con uno y varios identificadores, escrituras con cadenas,
+   identificadores y expresiones, y asignaciones aritmeticas y logicas.
+*/
+
+#incluir <flujo_es>
+
+clase Calculadora {
+
+    entero a, b, c;
+    flotante total, promedio;
+    booleano activo, estado;
+
+    vacio proceso() {
+
+        leer(a);
+        leer(b, c);
+
+        imprimir("Inicio del proceso");
+
+        total = a + b;
+        promedio = (a + b + c) / 3;
+        resto = a % b;
+        producto = a * 2 - c;
+
+        activo = a && b;
+        estado = !activo;
+        combinado = (a && b) || c;
+
+        imprimir("Resultado:", total);
+        imprimir(promedio);
+        imprimir(a + b);
+        imprimir(a, b, c);
+
+    }
+
+
+
+};
