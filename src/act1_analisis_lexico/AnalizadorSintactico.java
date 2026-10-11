@@ -7,23 +7,27 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 
-/*
+/**
  * Clase principal de la practica de ANALISIS SINTACTICO.
-  NOMBRES COMPLETOS DEL EQUIPO:
-  1) Larios Hernandez Carlos Alberto
-  2) Macias Renteria Dante Yael
-  3) Salcedo Ramos Luis Gael
-
-  Materia:   Traductores de Lenguaje
-  Profesor:  Jose Navarro Rios
-  Practica:  Analizador Lexico
-  Lenguaje:  C++Es  (C++ con palabras reservadas en español)
-*/
-
+ *
+ * Encadena las dos fases del compilador construidas hasta ahora:
+ *
+ *   archivo fuente  ->  CppLexer (analizador lexico)  ->  flujo de tokens
+ *                   ->  ParserCppEs (analizador sintactico)  ->  validacion
+ *
+ * El parser no lee el archivo: le pide tokens al lexer conforme los va
+ * necesitando. Por eso al constructor de ParserCppEs se le pasa el lexer.
+ *
+ * ORDEN DE EJECUCION EN NETBEANS
+ *   1) GeneradorCupSintantico  -> genera sym.java y ParserCppEs.java
+ *   2) GeneradorJFlexLexico    -> genera CppLexer.java
+ *   3) Clean and Build
+ *   4) AnalizadorSintactico    (esta clase)
+ */
 public class AnalizadorSintactico {
 
     private static final String ARCHIVO_POR_OMISION =
-            "src/act1_analisis_lexico/programa_con_errores.txt";
+            "src/act1_analisis_lexico/met_argumentos.txt";
 
     /* Poner en true para ver tambien la lista de tokens del analizador lexico */
     private static final boolean MOSTRAR_TOKENS = false;
@@ -34,7 +38,7 @@ public class AnalizadorSintactico {
 
         System.out.println("==================================================");
         System.out.println(" ANALIZADOR SINTACTICO - LENGUAJE C++Es");
-        System.out.println(" Estructura del archivo y gestion de errores");
+        System.out.println(" Metodos con parametros y valores de retorno");
         System.out.println(" Archivo analizado: " + ruta);
         System.out.println("==================================================");
         System.out.println();
@@ -47,6 +51,8 @@ public class AnalizadorSintactico {
 
             ParserCppEs parser = new ParserCppEs(lexer);
 
+            /* parse() consume el flujo de tokens completo. Cada vez que una
+               produccion se reduce, su accion imprime "Regla reconocida". */
             parser.parse();
 
             System.out.println();
@@ -58,6 +64,8 @@ public class AnalizadorSintactico {
             System.out.println(" Errores recuperables : " + parser.getErroresRecuperables());
             System.out.println(" Errores fatales      : " + parser.getErroresFatales());
             System.out.println(" Recuperaciones       : " + parser.getRecuperaciones());
+            System.out.println(" Advertencias semant. : " + parser.getAdvertenciasSemanticas()
+                             + "   (cantidad de argumentos; no son errores sintacticos)");
             System.out.println("==================================================");
 
             if (!parser.huboErrores() && lexer.getTotalErrores() == 0) {
@@ -67,7 +75,7 @@ public class AnalizadorSintactico {
             }
             System.out.println("==================================================");
 
-            /* Detalle de los errores lexicos */
+            /* Detalle de los errores lexicos, si los hubo */
             if (lexer.getTotalErrores() > 0) {
                 lexer.getManejadorErrores().imprimirResumen();
             }
