@@ -16,26 +16,14 @@ import java_cup.runtime.Symbol;
  *   1) GeneradorCupSintantico  -> genera sym.java y ParserCppEs.java
  *   2) GeneradorJFlexLexico    -> genera CppLexer.java
  *   3) Clean and Build
- *   4) AnalizadorLexico        
+ *   4) AnalizadorLexico        (esta clase)
  */
-
-/*
-  NOMBRES COMPLETOS DEL EQUIPO:
-  1) Larios Hernandez Carlos Alberto
-  2) Macias Renteria Dante Yael
-  3) Salcedo Ramos Luis Gael
-
-  Materia:   Traductores de Lenguaje
-  Profesor:  Jose Navarro Rios
-  Practica:  Analizador Lexico
-  Lenguaje:  C++Es  (C++ con palabras reservadas en español)
-*/
-
 public class AnalizadorLexico {
 
-    /* Archivo que se analiza */
+    /* Archivo que se analiza por omision. Se puede cambiar aqui o pasar
+       la ruta como argumento al ejecutar la clase. */
     private static final String ARCHIVO_POR_OMISION =
-            "src/act1_analisis_lexico/error_importacion.txt";
+            "src/act1_analisis_lexico/prueba1_programa_valido.txt";
 
     public static void main(String[] args) {
 
@@ -46,6 +34,8 @@ public class AnalizadorLexico {
         System.out.println(" Archivo analizado: " + ruta);
         System.out.println("==================================================");
 
+        /* Se fuerza UTF-8 para que las letras acentuadas y la ñ dentro de
+           identificadores y cadenas se lean igual en cualquier sistema. */
         try (Reader lector = new BufferedReader(
                 new InputStreamReader(new FileInputStream(ruta), StandardCharsets.UTF_8))) {
 
