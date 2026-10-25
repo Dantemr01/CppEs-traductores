@@ -5,9 +5,9 @@
 
 **Integrantes** (orden alfabético):
 
-1. _______________________
-2. _______________________
-3. _______________________
+1. Larios Hernandez Carlos Alberto
+2. Macias Renteria Dante Yael
+3. Salcedo Ramos Luis Gael
 
 **Lenguaje asignado:** **C++Es** — C++ con las palabras reservadas traducidas al español.
 
