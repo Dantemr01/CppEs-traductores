@@ -1,0 +1,7 @@
+/*
+   Clase sin miembros: el cuerpo esta vacio pero la estructura es valida.
+*/
+
+#incluir <flujo_es>
+
+clase Marcador { };

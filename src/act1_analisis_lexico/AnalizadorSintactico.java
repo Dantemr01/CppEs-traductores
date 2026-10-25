@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
 public class AnalizadorSintactico {
 
     private static final String ARCHIVO_POR_OMISION =
-            "src/act1_analisis_lexico/met_argumentos.txt";
+            "src/act1_analisis_lexico/sem_valido.txt";
 
     /* Poner en true para ver tambien la lista de tokens del analizador lexico */
     private static final boolean MOSTRAR_TOKENS = false;
@@ -37,8 +37,8 @@ public class AnalizadorSintactico {
         String ruta = (args.length > 0) ? args[0] : ARCHIVO_POR_OMISION;
 
         System.out.println("==================================================");
-        System.out.println(" ANALIZADOR SINTACTICO - LENGUAJE C++Es");
-        System.out.println(" Metodos con parametros y valores de retorno");
+        System.out.println(" ANALIZADOR SINTACTICO Y SEMANTICO - LENGUAJE C++Es");
+        System.out.println(" Verificacion de tipos de datos en expresiones");
         System.out.println(" Archivo analizado: " + ruta);
         System.out.println("==================================================");
         System.out.println();
@@ -64,12 +64,20 @@ public class AnalizadorSintactico {
             System.out.println(" Errores recuperables : " + parser.getErroresRecuperables());
             System.out.println(" Errores fatales      : " + parser.getErroresFatales());
             System.out.println(" Recuperaciones       : " + parser.getRecuperaciones());
+            System.out.println(" Errores semanticos   : " + parser.getErroresSemanticos()
+                             + "   (tipos, ambito e inmutabilidad)");
             System.out.println(" Advertencias semant. : " + parser.getAdvertenciasSemanticas()
                              + "   (cantidad de argumentos; no son errores sintacticos)");
             System.out.println("==================================================");
 
-            if (!parser.huboErrores() && lexer.getTotalErrores() == 0) {
-                System.out.println(" RESULTADO: la estructura del archivo es VALIDA.");
+            boolean sintaxisValida = !parser.huboErrores() && lexer.getTotalErrores() == 0;
+            boolean semanticaValida = parser.getErroresSemanticos() == 0;
+
+            if (sintaxisValida && semanticaValida) {
+                System.out.println(" RESULTADO: el archivo es VALIDO sintactica y semanticamente.");
+            } else if (sintaxisValida) {
+                System.out.println(" RESULTADO: la estructura es VALIDA, pero el archivo");
+                System.out.println("            viola las reglas de tipos del lenguaje.");
             } else {
                 System.out.println(" RESULTADO: la estructura del archivo NO es valida.");
             }
@@ -79,6 +87,10 @@ public class AnalizadorSintactico {
             if (lexer.getTotalErrores() > 0) {
                 lexer.getManejadorErrores().imprimirResumen();
             }
+
+            /* Reporte del analisis semantico y de la Tabla de Simbolos */
+            parser.getTipos().imprimirResumen();
+            parser.getTabla().imprimirResumen();
 
         } catch (IOException ex) {
             System.err.println("No se pudo leer el archivo: " + ruta);

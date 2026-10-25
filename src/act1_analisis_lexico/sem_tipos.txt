@@ -1,0 +1,59 @@
+/*
+   EJECUCION 3: MATRIZ DE COMPATIBILIDAD
+
+   Recorre la tabla del enunciado fila por fila. Las primeras asignaciones
+   son validas y muestran el tipo que propaga cada operador; las ultimas son
+   las combinaciones invalidas de la misma tabla.
+*/
+
+#incluir <flujo_es>
+
+clase Matriz {
+
+    entero   i = 1;
+    entero   j = 2;
+    flotante f = 1.5;
+    doble    d = 2.5;
+    booleano p = verdadero;
+    booleano q = falso;
+    cadena   s = "texto";
+    caracter c = 'A';
+
+    vacio ejecutar() {
+        entero   ri;
+        flotante rf;
+        doble    rd;
+        booleano rb;
+        cadena   rs;
+
+        /* ---- Filas validas de la matriz ---- */
+
+        ri = i + j;          /* entero   + entero   -> entero   */
+        rf = i + f;          /* entero   + flotante -> flotante */
+        rf = f * f;          /* flotante * flotante -> flotante */
+        rd = f + d;          /* flotante + doble    -> doble    */
+        ri = c + i;          /* caracter + entero   -> entero   */
+        ri = i % j;          /* modulo entre enteros            */
+
+        rb = i > j;          /* relacional sobre enteros  -> booleano */
+        rb = i <= f;         /* relacional mixto          -> booleano */
+        rb = p && q;         /* logico                    -> booleano */
+        rb = p || q;
+        rb = !p;
+        rb = s == s;         /* igualdad entre cadenas    -> booleano */
+        rb = p != q;         /* igualdad entre booleanos  -> booleano */
+        rb = c == c;
+
+        rs = s + s;          /* concatenacion de cadenas  -> cadena   */
+
+        /* ---- Filas invalidas de la matriz ---- */
+
+        ri = i + p;          /* entero  +  booleano : tipos incompatibles */
+        rb = p * q;          /* booleano *  booleano : operador no aplicable */
+        ri = s - i;          /* cadena  -  entero   : operacion no permitida */
+        rb = p > q;          /* booleano >  booleano : no son ordenables */
+        rb = s && p;         /* cadena  && booleano : el logico exige booleanos */
+        rb = i == s;         /* entero  == cadena   : no son comparables */
+    }
+
+};

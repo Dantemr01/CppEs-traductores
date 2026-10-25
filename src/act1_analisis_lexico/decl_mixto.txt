@@ -1,0 +1,32 @@
+/*
+   EJECUCION 3: MEZCLA DE DECLARACIONES CORRECTAS E INCORRECTAS
+   Demuestra que el analizador reconoce las estructuras validas, detecta
+   las incorrectas, reporta el error y CONTINUA con las siguientes.
+   Cada declaracion invalida esta seguida de una valida.
+*/
+
+#incluir <flujo_es>
+
+usando espacio_nombres estd;
+
+entero contadorGlobal = 0;
+
+constante entero LIMITE_GLOBAL = 50;
+
+clase Inventario {
+
+    entero cantidad;
+
+    entero codigo nombre;
+
+    cadena descripcion = "vacio";
+
+    constante doble IVA;
+
+    booleano disponible = falso;
+
+    flotante;
+
+    caracter categoria = 'A';
+
+};

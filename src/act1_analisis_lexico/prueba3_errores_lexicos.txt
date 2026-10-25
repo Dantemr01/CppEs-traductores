@@ -1,0 +1,63 @@
+/*
+   Prueba 3: errores lexicos deliberados.
+   Organizada segun las cuatro categorias que pide la practica.
+   Cada caso debe producir un mensaje con tipo, linea, columna,
+   descripcion y sugerencia, y el analisis debe CONTINUAR.
+*/
+
+// ============================================================
+// CATEGORIA 1: CARACTERES NO RECONOCIDOS
+// ============================================================
+entero valor @ 5;
+entero precio ¿ 100;
+entero total ` 3;
+entero saldo \ 7;
+
+// ============================================================
+// CATEGORIA 2: IDENTIFICADORES MAL FORMADOS
+// ============================================================
+entero 2variable = 10;      // comienza con digito
+entero 123abc = 20;         // comienza con digito
+entero mi$variable = 30;    // el simbolo $ no es valido en C++
+entero $precio = 40;        // comienza con $
+entero 9contador;           // comienza con digito
+
+// ============================================================
+// CATEGORIA 3: LITERALES NUMERICOS INCORRECTOS
+// ============================================================
+entero a = 0x;              // hexadecimal sin digitos
+entero b = 0xZZ;            // hexadecimal con digitos invalidos
+entero c = 0b;              // binario sin digitos
+entero d = 0b1210;          // binario con digitos invalidos
+entero e = 098;             // octal con digito fuera de rango
+flotante f = 1.5.5;         // dos puntos decimales
+flotante g = 3.14xyz;       // sufijo invalido en flotante
+
+// ============================================================
+// CATEGORIA 4: CADENAS Y CARACTERES MAL FORMADOS
+// ============================================================
+cadena m1 = "esta cadena nunca cierra
+entero recuperado1 = 1;
+
+cadena m2 = "escape invalido: \q aqui";
+entero recuperado2 = 2;
+
+caracter c1 = 'A;
+entero recuperado3 = 3;
+
+caracter c2 = 'AB';
+caracter c3 = '\q';
+entero recuperado4 = 4;
+
+// ============================================================
+// VERIFICACION DE RECUPERACION: esto debe tokenizarse bien
+// ============================================================
+entero final_ok = 42;
+imprimir << "todo bien despues de los errores" << fin_linea;
+
+// ============================================================
+// CATEGORIA 5: COMENTARIO SIN CERRAR (va al final a proposito,
+// porque por definicion consume el resto del archivo)
+// ============================================================
+/* este comentario se abre pero nunca se cierra
+   y por lo tanto consume todo lo que sigue

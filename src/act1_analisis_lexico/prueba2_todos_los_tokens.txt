@@ -1,0 +1,97 @@
+/*
+   Prueba 2: barrido exhaustivo.
+   Cada linea ejercita una categoria de componente lexico.
+   No pretende ser un programa con sentido, solo cubrir el alfabeto.
+*/
+
+// --- Tipos de dato ---
+entero flotante doble caracter booleano vacio cadena
+largo corto sin_signo con_signo auto constante estatico
+tipo_def tamanio_de
+
+// --- Estructuras de control ---
+si sino mientras para hacer segun caso defecto
+romper continuar retornar ir_a
+
+// --- Orientacion a objetos ---
+clase estructura union enumeracion
+publico privado protegido virtual amigo este
+nuevo borrar plantilla operador en_linea
+espacio_nombres usando
+
+// --- Excepciones ---
+intentar capturar lanzar
+
+// --- Literales del lenguaje ---
+verdadero falso nulo
+
+// --- Entrada / salida y punto de entrada ---
+imprimir leer fin_linea principal
+
+// --- Identificadores (incluye letras Unicode) ---
+x  contador  _privado  valor2  MiClase  tasa_de_cambio
+anioNacimiento  numeroDeAlumnos  posicion_X  Camion
+
+// --- Literales enteros decimales y con sufijo ---
+0  7  42  1000  123456789
+10u  10U  10l  10L  10ul  10UL  10ll  10LL  10ull  10ULL
+
+// --- Literales enteros en otras bases ---
+0x1F  0XABC  0xff  0xDEADBEEF  0x7FL
+0b0  0b1010  0B11110000
+01  0755  0177
+
+// --- Literales flotantes ---
+0.0  3.14  1.5  0.5  10.  .25
+1e10  1E10  2.5e-3  6.02E+23
+3.14f  3.14F  2.5l  1.0e6f
+
+// --- Literales de caracter ---
+'a'  'Z'  '0'  ' '  '_'
+'\n'  '\t'  '\r'  '\\'  '\''  '\"'  '\0'
+'\x41'  '\101'
+
+// --- Literales de cadena ---
+""
+"hola"
+"linea con espacios"
+"escape de comilla: \" listo"
+"escape de barra: \\ listo"
+"salto de linea: \n y tabulador: \t"
+"hexadecimal: \x41 y octal: \101"
+
+// --- Operadores aritmeticos ---
++ - * / %
+++ --
+
+// --- Operadores de asignacion ---
+= += -= *= /= %= &= |= ^= <<= >>=
+
+// --- Operadores relacionales ---
+< > <= >= == !=
+
+// --- Operadores logicos ---
+&& || !
+
+// --- Operadores a nivel de bits ---
+& | ^ ~ << >>
+
+// --- Simbolos de agrupacion ---
+( ) [ ] { }
+
+// --- Puntuacion y acceso ---
+, ; . : ? -> ::
+
+/* --- Comentarios --- */
+// comentario de una sola linea
+/* comentario
+   de varias
+   lineas */
+/** comentario de documentacion */
+/**/
+
+// --- Directivas ---
+#incluir <flujo_es>
+#incluir "propio.hes"
+#definir PI 3.14
+#sindef GUARDA

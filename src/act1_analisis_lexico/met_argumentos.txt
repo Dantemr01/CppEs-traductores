@@ -1,0 +1,27 @@
+/*
+   EJECUCION 4: VALIDACION DE LA CANTIDAD DE ARGUMENTOS
+   sumar se define con dos parametros. Las tres primeras llamadas son
+   correctas; las dos ultimas son sintacticamente validas pero no
+   coinciden con la definicion, lo cual es una inconsistencia SEMANTICA.
+*/
+
+#incluir <flujo_es>
+
+clase Aridad {
+
+    entero r;
+
+    entero sumar(entero a, entero b) {
+        retornar a + b;
+    }
+
+    vacio proceso() {
+        r = sumar(10, 20);
+        r = sumar(a, b);
+        r = sumar(a + 1, b * 2);
+
+        r = sumar(10);
+        r = sumar(10, 20, 30);
+    }
+
+};

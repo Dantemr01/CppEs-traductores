@@ -1,8 +1,8 @@
 /*
   NOMBRES COMPLETOS DEL EQUIPO:
-  1) Larios Hernandez Carlos Alberto
-  2) Macias Renteria Dante Yael
-  3) Salcedo Ramos Luis Gael
+  1) ...
+  2) ...
+  3) ...
 
   Materia:   Traductores de Lenguaje
   Profesor:  Jose Navarro Rios
@@ -16,6 +16,10 @@ import java_cup.runtime.Symbol;
 
 %%
 
+/* ------------------------------------------------------------------
+   OPCIONES Y DECLARACIONES
+   ------------------------------------------------------------------ */
+
 %class CppLexer
 %public
 %unicode
@@ -23,13 +27,19 @@ import java_cup.runtime.Symbol;
 %line
 %column
 
-
+/* Estado EXCLUSIVO (%xstate) en el que solo aplican las reglas marcadas
+   con <INCLUSION>. Es indispensable que sea exclusivo: si fuera inclusivo
+   (%state), las reglas generales seguirian activas y <flujo_es> se
+   descompondria en MENOR, IDENTIFICADOR y MAYOR.                          */
 %xstate INCLUSION
 
 %{
+  /* Contador de tokens y manejador de errores */
   private int totalTokens = 0;
   private final ManejadorErrores errores = new ManejadorErrores();
 
+  /* En la practica del analizador sintactico conviene silenciar la lista
+     de tokens para que se lean con claridad las reglas reconocidas.       */
   private boolean mostrarTokens = true;
   public void setMostrarTokens(boolean valor) { mostrarTokens = valor; }
 
@@ -37,6 +47,11 @@ import java_cup.runtime.Symbol;
   public int getTotalErrores() { return errores.total(); }
   public ManejadorErrores getManejadorErrores() { return errores; }
 
+  /*
+     Metodo auxiliar: imprime el token con el formato
+        [linea-columna] NOMBRE_TOKEN: lexema
+     y devuelve el Symbol que mas adelante consumira el parser (CUP).
+  */
   private Symbol token(int type) {
     totalTokens++;
     if (mostrarTokens) {
@@ -46,6 +61,7 @@ import java_cup.runtime.Symbol;
     return new Symbol(type, yyline + 1, yycolumn + 1, yytext());
   }
 
+  /* Sobrecarga por si se necesita guardar un valor ya procesado */
   private Symbol token(int type, Object value) {
     totalTokens++;
     if (mostrarTokens) {
@@ -55,7 +71,9 @@ import java_cup.runtime.Symbol;
     return new Symbol(type, yyline + 1, yycolumn + 1, value);
   }
 
-  /* Reporta un error lexico y CONTINUA el analisis (recuperacion de errores). */
+  /* Reporta un error lexico y CONTINUA el analisis (recuperacion de errores).
+     Toda la informacion de diagnostico -tipo, linea, columna, lexema,
+     descripcion y sugerencia- se delega al manejador de errores.          */
   private void error(ManejadorErrores.Tipo tipo, String descripcion, String sugerencia) {
     errores.reportar(tipo, yyline + 1, yycolumn + 1, yytext(), descripcion, sugerencia);
   }
@@ -66,12 +84,17 @@ FinDeLinea      = \r|\n|\r\n
 CaracterEntrada = [^\r\n]
 Espacios        = {FinDeLinea} | [ \t\f]
 
-/* ---------- Comentarios ---------- */
+/* ---------- Comentarios ----------
+   Se sigue la misma tecnica del ejemplo del profesor:
+   el operador ~ de JFlex significa "hasta encontrar, incluyendolo".      */
 Comentario           = {ComentarioBloque} | {ComentarioLinea} | {ComentarioDoc}
 ComentarioBloque     = "/*" [^*] ~"*/" | "/*" "*"+ "/"
 ComentarioLinea      = "//" {CaracterEntrada}* {FinDeLinea}?
 ComentarioDoc        = "/**" {ContenidoDoc} "*"+ "/"
 ContenidoDoc         = ( [^*] | \*+ [^/*] )*
+/* Comentario de bloque que se abre y nunca se cierra.
+   El operador ! significa "todo lo que NO empareja con", asi que esto es:
+   apertura de bloque seguida de texto que no contiene la marca de cierre.  */
 ComentarioNoCerrado  = "/*" !([^]* "*/" [^]*)
 
 /* ---------- Identificadores ----------
@@ -81,7 +104,12 @@ Letra          = [:letter:] | "_"
 Digito         = [0-9]
 Identificador  = {Letra} ({Letra} | {Digito})*
 
-/* ---------- Identificadores mal formados ---------- */
+/* ---------- Identificadores mal formados ----------
+   Dos casos que la practica pide detectar explicitamente:
+   a) comenzar con digito          -> 2variable, 123abc
+   b) contener el simbolo $        -> mi$variable
+   El $ es valido en Java pero NO en C++; es justo la diferencia entre
+   [:jletter:] y [:letter:] que se explico arriba.                        */
 IdentIniciaDigito = {Digito}+ {Letra} ({Letra} | {Digito})*
 IdentConSimbolo   = {Letra} ({Letra} | {Digito})* "$" ({Letra} | {Digito} | "$")*
                   | "$" {Letra} ({Letra} | {Digito} | "$")*
@@ -93,6 +121,9 @@ SufijoEntero   = ([uU][lL][lL]) | ([lL][lL][uU]) | ([uU][lL]) | ([lL][uU]) | ([l
 SufijoFlotante = [fFlL]
 Exponente      = [eE] [+-]? {Digitos}
 
+/* Se escribe (0 | [1-9]...) y NO {Digitos}, igual que en el ejemplo del
+   profesor. Asi "098" no se acepta como decimal valido y puede caer en la
+   regla de error de octal mal formado.                                   */
 LitEnteroDec   = ( 0 | [1-9] {Digito}* ) {SufijoEntero}?
 LitEnteroHex   = 0 [xX] [0-9a-fA-F]+ {SufijoEntero}?
 LitEnteroBin   = 0 [bB] [01]+ {SufijoEntero}?
@@ -104,18 +135,26 @@ LitFlotante    = {Digitos} "." {Digitos}? {Exponente}? {SufijoFlotante}?
 
 /* ---------- Cadenas y caracteres ---------- */
 Escape         = \\ [abfnrtv0\\\'\"?] | \\ x [0-9a-fA-F]+ | \\ [0-7] [0-7]? [0-7]?
+/* Barra invertida seguida de algo que NO es una secuencia de escape valida */
 EscapeInvalido = \\ [^abfnrtvx0-7\\\'\"?\r\n]
 
 LitCadena      = \" ( [^\"\\\r\n] | {Escape} )* \"
 CadenaAbierta  = \" ( [^\"\\\r\n] | {Escape} )*
+/* Cadena bien delimitada pero con al menos un escape invalido adentro */
 CadenaEscapeMal = \" ( [^\"\\\r\n] | {Escape} | {EscapeInvalido} )* \"
 
 LitCaracter    = \' ( [^\'\\\r\n] | {Escape} ) \'
+/* Solo un caracter: asi "letra = 'A;" reporta el error y el ; se sigue
+   reconociendo normalmente en vez de perderse.                          */
 CaracterAbierto = \' ( [^\'\\\r\n] | {Escape} )?
+/* Literal de caracter con dos o mas caracteres adentro: 'AB' */
 CaracterMultiple = \' ( [^\'\\\r\n] | {Escape} ) ( [^\'\\\r\n] | {Escape} )+ \'
+/* Literal de caracter con una secuencia de escape invalida: '\q' */
 CaracterEscapeMal = \' {EscapeInvalido} \'
 
-/* ---------- Directivas del preprocesador ---------- */
+/* ---------- Directivas del preprocesador ----------
+   La ruta se incluye EN LA MISMA REGLA para que <iostream> no se
+   descomponga en MENOR / IDENTIFICADOR / MAYOR.                          */
 RutaSistema    = "<" [^<>\r\n]* ">"
 RutaLocal      = \" [^\"\r\n]* \"
 MarcaIncluir   = "#" [ \t]* "incluir"
@@ -126,6 +165,9 @@ OtraDirectiva  = "#" [ \t]* {Identificador}
 
 /* ------------------------------------------------------------------
    REGLAS LEXICAS
+   El orden importa: a igual longitud de coincidencia, gana la regla
+   que aparezca primero (JFlex aplica "la coincidencia mas larga" y
+   despues "la primera regla escrita").
    ------------------------------------------------------------------ */
 
 /* ===== 1. Comentarios y espacios (se ignoran) ===== */
@@ -133,6 +175,10 @@ OtraDirectiva  = "#" [ \t]* {Identificador}
 {Espacios}            { /* Ignorar */ }
 
 /* ===== 2. Directivas del preprocesador ===== */
+/* La marca y la ruta se emiten como DOS tokens, para que el analizador
+   sintactico pueda validar la regla  importacion -> INCLUIR RUTA_INCLUSION.
+   Al entrar en el estado INCLUSION, la ruta <flujo_es> se lee completa y no
+   se confunde con los operadores menor-que y mayor-que.                    */
 {MarcaIncluir}        { yybegin(INCLUSION); return token(sym.INCLUIR); }
 {Definir}             { return token(sym.DIRECTIVA_DEFINIR); }
 {OtraDirectiva}       { return token(sym.DIRECTIVA);         }
@@ -154,7 +200,9 @@ OtraDirectiva  = "#" [ \t]* {Identificador}
                                          "use <angulos> para librerias del sistema o \"comillas\" para archivos propios"); }
 }
 
-/* ===== 3. Palabras reservadas ===== */
+/* ===== 3. Palabras reservadas =====
+   Deben ir ANTES de {Identificador}: con la misma longitud gana la
+   regla escrita primero.                                                */
 
 /* --- Tipos de dato --- */
 "entero"              { return token(sym.ENTERO);      }
@@ -237,7 +285,9 @@ OtraDirectiva  = "#" [ \t]* {Identificador}
 /* ===== 6. Identificadores ===== */
 {Identificador}       { return token(sym.IDENTIFICADOR); }
 
-/* ===== 7. Operadores y simbolos ===== */
+/* ===== 7. Operadores y simbolos =====
+   Los de varios caracteres se escriben primero por legibilidad;
+   JFlex de todas formas elige siempre la coincidencia mas larga.        */
 
 /* Asignaciones compuestas */
 "<<="                 { return token(sym.DESP_IZQ_ASIGNA); }
@@ -305,7 +355,16 @@ OtraDirectiva  = "#" [ \t]* {Identificador}
 ":"                   { return token(sym.DOS_PUNTOS);   }
 "?"                   { return token(sym.INTERROGACION);}
 
-/* ===== 8. Reglas de error ===== */
+/* ===== 8. Reglas de error =====
+
+   Todas van al final por como resuelve JFlex:
+     (1) gana la coincidencia mas larga;
+     (2) a igual longitud, gana la regla escrita primero.
+
+   Asi, "0xFF" empata en 4 caracteres con la regla de error, pero gana la
+   regla valida por estar escrita antes; en cambio "0xZZ" solo empareja con
+   la regla de error. Si las reglas de error estuvieran arriba, todo literal
+   hexadecimal correcto se reportaria como error.                          */
 
 /* ---------- 8.1 Literales numericos incorrectos ---------- */
 
@@ -387,7 +446,9 @@ OtraDirectiva  = "#" [ \t]* {Identificador}
             "comentario de bloque abierto que nunca se cierra",
             "agregue la marca de cierre de comentario de bloque"); }
 
-/* ===== 9. Caracteres no reconocidos ===== */
+/* ===== 9. Caracteres no reconocidos =====
+   Regla de ultimo recurso: cualquier caracter que no encaje en ninguna
+   regla anterior se reporta y se descarta, para poder seguir analizando. */
 
 .   { error(ManejadorErrores.Tipo.CARACTER_NO_RECONOCIDO,
             "el caracter no pertenece al alfabeto de C++Es",

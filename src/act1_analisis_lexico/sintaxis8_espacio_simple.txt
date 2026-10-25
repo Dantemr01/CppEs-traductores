@@ -1,0 +1,11 @@
+/*
+   Caso 8: espacio de nombres con UN SOLO identificador.
+   Es la linea canonica de C++ (using namespace std;) y por eso la
+   regla ubicacion se definio con * y no con + como en el enunciado.
+*/
+
+#incluir <flujo_es>
+
+usando espacio_nombres estandar;
+
+clase Calculadora { };

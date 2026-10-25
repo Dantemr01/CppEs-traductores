@@ -1,8 +1,8 @@
 /*
   NOMBRES COMPLETOS DEL EQUIPO:
-  1) Larios Hernandez Carlos Alberto
-  2) Macias Renteria Dante Yael
-  3) Salcedo Ramos Luis Gael
+  1) ...
+  2) ...
+  3) ...
 
   Materia:   Traductores de Lenguaje
   Profesor:  Jose Navarro Rios
@@ -16,7 +16,15 @@
      paquete          -> 'usando' 'espacio_nombres' ubicacion ';'
      ubicacion        -> identificador ( '::' identificador )*
      clase_principal  -> 'clase' identificador cuerpo_clase ';'
-     cuerpo_clase     -> '{' '}'
+     cuerpo_clase     -> '{' (atributo | constante)* '}'
+
+     variable         -> tipo lista_identificadores ('=' valor)? ';'
+     atributo         -> tipo lista_identificadores ('=' valor)? ';'
+     constante        -> 'constante' tipo identificador '=' valor ';'
+     lista_identificadores -> identificador (',' identificador)*
+     tipo             -> 'entero' | 'flotante' | 'doble' | 'caracter'
+                       | 'booleano' | 'cadena' | identificador
+     valor            -> numero | cadena | caracter | booleano | 'nulo'
 
   GESTION DE ERRORES
 
@@ -178,6 +186,175 @@ parser code {:
 
     /* Se invoca desde las producciones que contienen el simbolo 'error',
        una vez que el analizador logro resincronizar.                     */
+    /* Indica que se esperaba en el punto del error. Complementa el mensaje
+       generico de report_error, que CUP emite antes de saber en que regla
+       estaba el analizador.                                              */
+    public void esperaba(String queSeEsperaba, int linea, int columna) {
+        System.out.println("     >> Se esperaba " + queSeEsperaba
+                         + " (linea " + linea + ", columna " + columna + ").");
+    }
+
+    /* ==============================================================
+       5. ANALISIS SEMANTICO
+
+       Dos colaboradores, cada uno con una responsabilidad:
+
+         tabla -> que identificadores existen, de que tipo son, en que
+                  ambito viven y si admiten reasignacion
+         tipos -> si una operacion o una asignacion es legal entre los
+                  tipos involucrados, y el reporte de los errores
+
+       Las acciones de la gramatica no deciden nada por su cuenta: calculan
+       el tipo de cada subexpresion preguntando aqui.
+       ============================================================== */
+    private final ManejadorTipos tipos = new ManejadorTipos();
+    private final TablaSimbolos  tabla = new TablaSimbolos(tipos);
+
+    public ManejadorTipos getTipos() { return tipos; }
+    public TablaSimbolos  getTabla() { return tabla; }
+    public int getErroresSemanticos() { return tipos.getErroresSemanticos(); }
+
+    /* ---------- Utilidades de texto para los mensajes ---------- */
+
+    /** "contador, total, indice" a partir de la lista de identificadores. */
+    public String listaDeNombres(java.util.ArrayList ids) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ids.size(); i++) {
+            if (i > 0) { sb.append(", "); }
+            sb.append(((Identificador) ids.get(i)).getNombre());
+        }
+        return sb.toString();
+    }
+
+    /** "5, 10" a partir de la lista de argumentos de una llamada. */
+    public String textos(java.util.ArrayList expresiones) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < expresiones.size(); i++) {
+            if (i > 0) { sb.append(", "); }
+            sb.append(((Expresion) expresiones.get(i)).getTexto());
+        }
+        return sb.toString();
+    }
+
+    /* ==============================================================
+       DECLARACIONES
+
+       Una sola declaracion puede dar de alta varios nombres, y cada uno se
+       registra con su propia posicion. Si la declaracion trae un valor
+       inicial, se verifica su compatibilidad contra el tipo declarado, que
+       es la comprobacion que distingue a un lenguaje estaticamente tipado.
+       ============================================================== */
+
+    public void declararMiembros(java.util.ArrayList ids, String categoria,
+                                 String tipo, Expresion valorInicial) {
+        for (int i = 0; i < ids.size(); i++) {
+            Identificador x = (Identificador) ids.get(i);
+            Simbolo s = tabla.declarar(x.getNombre(), categoria, tipo,
+                                       x.getLinea(), x.getColumna());
+            if (valorInicial != null) {
+                s.setInicializado(true);
+                tipos.verificarAsignacion(articulo(categoria), x.getNombre(),
+                                          tipo, valorInicial,
+                                          x.getLinea(), x.getColumna());
+            }
+        }
+    }
+
+    /** Igual que lo anterior, pero dentro del ambito local de un metodo. */
+    public void declararLocales(java.util.ArrayList ids, String tipo,
+                                Expresion valorInicial) {
+        tabla.abrirAmbitoLocal("(en curso)");
+        declararMiembros(ids, Simbolo.VARIABLE, tipo, valorInicial);
+    }
+
+    public void declararConstante(String nombre, String tipo, Expresion valor,
+                                  int linea, int columna) {
+        Simbolo s = tabla.declarar(nombre, Simbolo.CONSTANTE, tipo, linea, columna);
+        s.setInicializado(true);
+        tipos.verificarAsignacion("la constante", nombre, tipo, valor, linea, columna);
+    }
+
+    public void declararParametro(String tipo, String nombre, int linea, int columna) {
+        tabla.abrirAmbitoLocal("(en curso)");
+        Simbolo s = tabla.declarar(nombre, Simbolo.PARAMETRO, tipo, linea, columna);
+        s.setInicializado(true);
+    }
+
+    private String articulo(String categoria) {
+        if (Simbolo.ATRIBUTO.equals(categoria))  { return "el atributo";  }
+        if (Simbolo.CONSTANTE.equals(categoria)) { return "la constante"; }
+        if (Simbolo.PARAMETRO.equals(categoria)) { return "el parametro"; }
+        return "la variable";
+    }
+
+    /* ==============================================================
+       ASIGNACIONES
+
+       Dos comprobaciones encadenadas, en este orden:
+         1) el destino existe y es modificable  -> Tabla de Simbolos
+         2) el valor es compatible con su tipo  -> Manejador de Tipos
+       Si la primera falla no se intenta la segunda, para no encadenar dos
+       mensajes sobre el mismo error.
+       ============================================================== */
+    public void verificarAsignacion(String nombre, Expresion valor,
+                                    int linea, int columna) {
+        Simbolo destino = tabla.destinoDeAsignacion(nombre, linea, columna);
+        if (destino == null) { return; }
+
+        tipos.verificarAsignacion(articulo(destino.getCategoria()), nombre,
+                                  destino.getTipo(), valor, linea, columna);
+        destino.setInicializado(true);
+    }
+
+    /* ==============================================================
+       METODOS Y LLAMADAS
+
+       El metodo se registra al reducir su regla, es decir, cuando ya se
+       analizo su cuerpo. Por eso una llamada a un metodo que todavia no se
+       ha declarado no produce error: el analizador es de una sola pasada y
+       resolver referencias hacia adelante exigiria una segunda.
+       ============================================================== */
+    private int advertenciasSemanticas = 0;
+
+    public int getAdvertenciasSemanticas() { return advertenciasSemanticas; }
+
+    public void registrarMetodo(String nombre, String tipoDeRetorno,
+                                int numeroDeParametros, int linea, int columna) {
+        tabla.declararMetodo(nombre, tipoDeRetorno, numeroDeParametros,
+                             linea, columna);
+    }
+
+    /**
+     * Verifica una llamada y devuelve el TIPO que produce, para que pueda
+     * usarse dentro de una expresion.
+     *
+     * La cantidad de argumentos no es un error sintactico: la estructura de
+     * la llamada puede ser impecable y aun asi no coincidir con la
+     * definicion. Por eso se cuenta como ADVERTENCIA, en un contador aparte.
+     */
+    public String verificarLlamada(String nombre, int numeroDeArgumentos,
+                                   int linea, int columna) {
+
+        Simbolo m = tabla.buscar(nombre);
+
+        if (m == null || !Simbolo.METODO.equals(m.getCategoria())) {
+            return ManejadorTipos.INDETERMINADO;
+        }
+
+        int n = m.getNumeroDeParametros();
+        if (n != numeroDeArgumentos) {
+            advertenciasSemanticas++;
+            System.out.println("Advertencia semantica en linea " + linea
+                + ", columna " + columna + ": el metodo '" + nombre
+                + "' requiere " + n + " argumento(s) y se recibieron "
+                + numeroDeArgumentos + ".");
+            System.out.println("     (la estructura de la llamada es sintacticamente"
+                + " valida; la inconsistencia es semantica)");
+        }
+
+        return m.getTipo();
+    }
+
     public void recuperado(String queSeDescarto) {
         recuperaciones++;
         System.out.println("     >> Recuperacion: se descarto " + queSeDescarto
@@ -215,7 +392,8 @@ parser code {:
             return "solo se admite una clase principal por archivo";
         }
         if (s.sym == sym.PUNTO_COMA) {
-            return "falta la llave de cierre, o hay un punto y coma fuera de lugar";
+            return "la estructura esta incompleta: falta el elemento que deberia "
+                 + "preceder al punto y coma";
         }
         if (s.sym == sym.IDENTIFICADOR) {
             return "se esperaba otra estructura: revise si falta un delimitador o una palabra reservada";
@@ -227,6 +405,15 @@ parser code {:
 /* ==================================================================
    TERMINALES
    ================================================================== */
+
+/* --- Terminal ficticio: no lo produce el analizador lexico.
+       Existe solo para dar al menos unario (-x) una precedencia distinta
+       de la del menos binario (a - b), mediante %prec NEGATIVO.      --- */
+terminal          NEGATIVO;
+
+/* --- Otro terminal ficticio: da a la seleccion simple una precedencia
+       menor que la de 'sino', para resolver el 'sino colgante'.      --- */
+terminal          SIN_SINO;
 
 /* --- Directivas del preprocesador --- */
 terminal String  INCLUIR, RUTA_INCLUSION, DIRECTIVA_DEFINIR, DIRECTIVA;
@@ -291,7 +478,83 @@ terminal String  RESOLUCION;
 
 non terminal          archivo, lista_importaciones, importacion;
 non terminal          paquete_opcional, paquete, clase_principal, cuerpo_clase;
-non terminal String   ubicacion;
+non terminal          lista_globales, variable, constante_global;
+non terminal          miembro, atributo, constante_decl;
+non terminal String   ubicacion, tipo, tipo_primitivo;
+non terminal Integer  lista_miembros, cuerpo_metodo;
+non terminal          metodo, lectura, escritura, asignacion;
+non terminal String   elemento, lista_elementos;
+
+/* --- Estructuras de control --- */
+non terminal          seleccion_simple, seleccion_doble, seleccion_multiple;
+non terminal          ciclo_mientras, ciclo_hacer_mientras, ciclo_para;
+non terminal          caso, defecto, defecto_opcional;
+non terminal String   asignacion_simple;
+non terminal Integer  lista_casos;
+
+/* Estos devuelven CUANTAS estructuras de control contienen directamente.
+   Es lo que permite detectar el anidamiento sin inspeccionar el arbol. */
+non terminal Integer  sentencia, lista_sentencias, bloque, cuerpo_caso;
+
+/* --- Metodos con parametros, retorno y llamadas --- */
+non terminal String             parametro;
+non terminal java.util.ArrayList parametros_opcionales, lista_parametros;
+non terminal java.util.ArrayList lista_argumentos;
+
+/* ==================================================================
+   NO TERMINALES CON TIPO DE DATO  (verificacion semantica)
+
+   Estos son el cambio central de esta practica. Hasta ahora 'expresion'
+   devolvia solo el TEXTO reconstruido de la expresion, que era lo unico
+   que hacia falta para los mensajes. Ahora devuelve un objeto Expresion
+   que lleva el texto Y el TIPO que la expresion produce, de modo que el
+   tipo se PROPAGA de las hojas hacia la raiz del arbol y cada operador
+   puede verificar a sus operandos.
+
+   Como Expresion.toString() devuelve el texto, todas las acciones que ya
+   concatenaban la expresion en un mensaje siguen funcionando sin cambios.
+   ================================================================== */
+non terminal Expresion  expresion, valor, condicion, llamada_metodo;
+
+/* Los identificadores de una declaracion, cada uno con su posicion. */
+non terminal java.util.ArrayList lista_identificadores;
+
+/* Declaracion de variables y constantes LOCALES a un metodo. */
+non terminal            declaracion_local;
+
+/* ==================================================================
+   PRECEDENCIA Y ASOCIATIVIDAD DE LOS OPERADORES
+
+   El enunciado plantea las expresiones con dos no terminales paralelos,
+   expresion_aritmetica y expresion_logica, y ambos pueden derivar un
+   identificador suelto. Escrita asi, la gramatica es AMBIGUA: ante
+   "a" el analizador no puede decidir cual de los dos aplicar, y CUP
+   reporta decenas de conflictos.
+
+   La solucion estandar es una sola regla 'expresion' con las
+   precedencias declaradas. Las lineas de abajo van de MENOR a MAYOR
+   prioridad, que es el orden que exige CUP, y reproducen la precedencia
+   real de C++: los operadores logicos se evaluan despues que los
+   aritmeticos, y la multiplicacion antes que la suma.
+   ================================================================== */
+/* El 'sino colgante': ante  si (c) bloque . sino  el analizador puede
+   reducir la seleccion simple o desplazar el 'sino' de la doble. Aqui
+   el conflicto lo provoca la produccion de error  sentencia ::= SINO
+   bloque, que mete SINO en el conjunto SIGUIENTE de sentencia. Dar a
+   'sino' mayor precedencia que a la seleccion simple hace que gane el
+   desplazamiento, que es el comportamiento correcto: el 'sino' siempre
+   se asocia al 'si' mas cercano.                                      */
+precedence nonassoc SIN_SINO;
+precedence nonassoc SINO;
+
+precedence left  OR_LOGICO;
+precedence left  AND_LOGICO;
+precedence left  IGUAL, DIFERENTE;
+precedence left  MENOR, MAYOR, MENOR_IGUAL, MAYOR_IGUAL;
+precedence left  MAS, MENOS;
+precedence left  POR, ENTRE, MODULO;
+precedence right NOT_LOGICO;
+precedence right NEGATIVO;
 
 /* ==================================================================
    REGLAS GRAMATICALES
@@ -304,8 +567,53 @@ start with archivo;
 
    Sin produccion de 'error': es lo que hace posible el error FATAL.
    ------------------------------------------------------------------ */
-archivo ::= lista_importaciones paquete_opcional clase_principal
+archivo ::= lista_importaciones paquete_opcional lista_globales clase_principal
             {: parser.finalizado(); :}
+;
+
+/* ------------------------------------------------------------------
+   Variables globales: declaradas fuera de la clase.
+   Es lo que distingue una VARIABLE de un ATRIBUTO: en C++ la forma
+   sintactica es identica, y lo unico que cambia es el ambito en el que
+   aparece. Por eso son producciones distintas con el mismo cuerpo.
+   ------------------------------------------------------------------ */
+lista_globales ::= lista_globales variable
+                 | lista_globales constante_global
+                 | /* vacio */
+;
+
+/* Constante declarada fuera de la clase. */
+constante_global ::= CONSTANTE:c tipo:t IDENTIFICADOR:id ASIGNA valor:v PUNTO_COMA
+                     {: parser.declararConstante(id, t, v, idleft, idright);
+                        parser.ok("Declaracion de constante global reconocida: "
+                                  + t + " " + id + " = " + v, cleft, cright); :}
+
+                   /* ERROR RECUPERABLE: constante sin inicializacion */
+                   | CONSTANTE:c tipo:t IDENTIFICADOR:id PUNTO_COMA
+                     {: parser.reportarError(
+                            "la constante global " + id + " debe inicializarse en su declaracion",
+                            cleft, cright, sym.CONSTANTE, "constante");
+                        parser.recuperado("la constante global sin valor de inicializacion"); :}
+;
+
+variable ::= tipo:t lista_identificadores:ids PUNTO_COMA
+             {: parser.declararMiembros(ids, Simbolo.VARIABLE, t, null);
+                parser.ok("Declaracion de variable reconocida: "
+                          + t + " " + parser.listaDeNombres(ids),
+                          tleft, tright); :}
+
+           | tipo:t lista_identificadores:ids ASIGNA valor:v PUNTO_COMA
+             {: parser.declararMiembros(ids, Simbolo.VARIABLE, t, v);
+                parser.ok("Inicializacion de variable reconocida: "
+                          + t + " " + parser.listaDeNombres(ids) + " = " + v,
+                          tleft, tright); :}
+
+           /* ERROR RECUPERABLE: declaracion incompleta */
+           | tipo:t PUNTO_COMA:pc
+             {: parser.reportarError(
+                    "declaracion invalida: falta el identificador de la variable",
+                    pcleft, pcright, sym.PUNTO_COMA, ";");
+                parser.recuperado("la declaracion de variable incompleta"); :}
 ;
 
 /* ---- importacion* (cero o mas) ---- */
@@ -405,10 +713,898 @@ clase_principal ::= CLASE:c IDENTIFICADOR:id cuerpo_clase PUNTO_COMA
 /* ------------------------------------------------------------------
    cuerpo_clase -> '{' '}'
    ------------------------------------------------------------------ */
-cuerpo_clase ::= LLAVE_IZQ:a LLAVE_DER
-                 {: parser.ok("Estructura de llaves valida", aleft, aright); :}
+cuerpo_clase ::= LLAVE_IZQ:a lista_miembros:n LLAVE_DER
+                 {: parser.ok("Estructura de llaves valida", aleft, aright);
+                    if (n.intValue() == 0) {
+                        parser.ok("Clase vacia: no declara miembros", aleft, aright);
+                    } else {
+                        parser.ok("Clase con miembros: " + n + " declaracion(es)",
+                                  aleft, aright);
+                    } :}
 
-               /* ERROR RECUPERABLE: falta la llave de cierre. */
-               | LLAVE_IZQ:a error
-                 {: parser.recuperado("el cuerpo de clase sin llave de cierre"); :}
+               /* ERROR RECUPERABLE: falta la llave de cierre.
+                  No se usa el simbolo 'error' aqui porque chocaria con la
+                  produccion  miembro ::= error PUNTO_COMA, que tambien puede
+                  desplazar 'error' en este mismo punto. Una produccion
+                  explicita evita el conflicto y da un mensaje mas preciso.  */
+               | LLAVE_IZQ:a lista_miembros
+                 {: parser.reportarError(
+                        "falta la llave de cierre del cuerpo de la clase",
+                        aleft, aright, sym.LLAVE_IZQ, "{");
+                    parser.recuperado("el cuerpo de clase sin llave de cierre"); :}
+;
+
+/* ------------------------------------------------------------------
+   cuerpo_clase -> ( atributo | constante )*
+   El no terminal devuelve cuantos miembros se declararon, para poder
+   distinguir una clase vacia de una clase con miembros.
+   ------------------------------------------------------------------ */
+lista_miembros ::= lista_miembros:l miembro
+                   {: RESULT = Integer.valueOf(l.intValue() + 1); :}
+
+                 | /* vacio */
+                   {: RESULT = Integer.valueOf(0); :}
+;
+
+miembro ::= atributo
+          | constante_decl
+          | metodo
+
+          /* ERROR RECUPERABLE: miembro irreconocible.
+             El punto y coma actua como punto de sincronizacion. */
+          | error PUNTO_COMA
+            {: parser.recuperado("el miembro de clase mal declarado"); :}
+;
+
+/* ------------------------------------------------------------------
+   atributo -> tipo lista_identificadores ('=' valor)? ';'
+   ------------------------------------------------------------------ */
+atributo ::= tipo:t lista_identificadores:ids PUNTO_COMA
+             {: parser.declararMiembros(ids, Simbolo.ATRIBUTO, t, null);
+                parser.ok("Declaracion de atributo reconocida: "
+                          + t + " " + parser.listaDeNombres(ids),
+                          tleft, tright); :}
+
+           | tipo:t lista_identificadores:ids ASIGNA valor:v PUNTO_COMA
+             {: parser.declararMiembros(ids, Simbolo.ATRIBUTO, t, v);
+                parser.ok("Declaracion de atributo con inicializacion: "
+                          + t + " " + parser.listaDeNombres(ids) + " = " + v,
+                          tleft, tright); :}
+
+           /* ERROR RECUPERABLE: falta el identificador */
+           | tipo:t PUNTO_COMA:pc
+             {: parser.reportarError(
+                    "declaracion invalida: falta el identificador del atributo",
+                    pcleft, pcright, sym.PUNTO_COMA, ";");
+                parser.recuperado("la declaracion de atributo incompleta"); :}
+
+           /* ERROR RECUPERABLE: falta el valor despues del signo igual */
+           | tipo:t lista_identificadores:ids ASIGNA:eq PUNTO_COMA
+             {: parser.reportarError(
+                    "falta el valor de inicializacion despues del signo igual",
+                    eqleft, eqright, sym.ASIGNA, "=");
+                parser.recuperado("la inicializacion sin valor"); :}
+;
+
+/* ------------------------------------------------------------------
+   constante -> 'constante' tipo identificador '=' valor ';'
+   A diferencia del atributo, el valor de inicializacion es OBLIGATORIO.
+   ------------------------------------------------------------------ */
+constante_decl ::= CONSTANTE:c tipo:t IDENTIFICADOR:id ASIGNA valor:v PUNTO_COMA
+                   {: parser.declararConstante(id, t, v, idleft, idright);
+                      parser.ok("Declaracion de constante reconocida: "
+                                + t + " " + id + " = " + v, cleft, cright); :}
+
+                 /* ERROR RECUPERABLE: constante sin inicializacion */
+                 | CONSTANTE:c tipo:t IDENTIFICADOR:id PUNTO_COMA
+                   {: parser.getTabla().declarar(id, Simbolo.CONSTANTE, t,
+                                                 idleft, idright);
+                      parser.reportarError(
+                          "la constante " + id + " debe inicializarse en su declaracion",
+                          cleft, cright, sym.CONSTANTE, "constante");
+                      parser.recuperado("la constante sin valor de inicializacion"); :}
+;
+
+/* ------------------------------------------------------------------
+   lista_identificadores -> identificador (',' identificador)*
+   ------------------------------------------------------------------ */
+lista_identificadores ::= IDENTIFICADOR:id
+                          {: RESULT = new java.util.ArrayList();
+                             RESULT.add(new Identificador(id, idleft, idright)); :}
+
+                        | lista_identificadores:l COMA IDENTIFICADOR:id
+                          {: l.add(new Identificador(id, idleft, idright));
+                             RESULT = l; :}
+
+                        /* ERROR RECUPERABLE: coma duplicada -> leer(a, , b) */
+                        | lista_identificadores:l COMA COMA:c IDENTIFICADOR:id
+                          {: l.add(new Identificador(id, idleft, idright));
+                             RESULT = l;
+                             parser.reportarError("hay una coma duplicada en la lista",
+                                                  cleft, cright, sym.COMA, ",");
+                             parser.recuperado("la coma sobrante"); :}
+
+                        /* ERROR RECUPERABLE: falta la coma separadora */
+                        | lista_identificadores:l IDENTIFICADOR:id
+                          {: l.add(new Identificador(id, idleft, idright));
+                             RESULT = l;
+                             parser.reportarError(
+                                 "falta una coma entre los identificadores",
+                                 idleft, idright, sym.IDENTIFICADOR, id);
+                             parser.recuperado("la coma faltante"); :}
+;
+
+/* ------------------------------------------------------------------
+   tipo -> tipo primitivo | 'vacio' | identificador
+
+   'tipo_primitivo' se separo en esta practica porque las declaraciones
+   LOCALES a un metodo solo lo admiten a el. Permitir ahi el identificador
+   haria la gramatica ambigua: ante  total = 5;  el analizador no podria
+   decidir si 'total' es el tipo de una declaracion o el destino de una
+   asignacion hasta ver el token siguiente.
+   ------------------------------------------------------------------ */
+tipo ::= tipo_primitivo:x  {: RESULT = x; :}
+       | VACIO:x           {: RESULT = x; :}
+       | IDENTIFICADOR:x   {: RESULT = x; :}
+;
+
+tipo_primitivo ::= ENTERO:x   {: RESULT = x; :}
+                 | FLOTANTE:x {: RESULT = x; :}
+                 | DOBLE:x    {: RESULT = x; :}
+                 | CARACTER:x {: RESULT = x; :}
+                 | BOOLEANO:x {: RESULT = x; :}
+                 | CADENA:x   {: RESULT = x; :}
+;
+
+/* ------------------------------------------------------------------
+   valor -> numero | cadena | caracter | booleano | nulo
+
+   Cada literal lleva ahora su TIPO ademas de su lexema. Es la base de
+   toda la propagacion: el tipo de una expresion se calcula desde las
+   hojas, y las hojas son los literales y los identificadores.
+   ------------------------------------------------------------------ */
+valor ::= LIT_ENTERO:x       {: RESULT = new Expresion(x, ManejadorTipos.ENTERO);   :}
+        | LIT_ENTERO_HEX:x   {: RESULT = new Expresion(x, ManejadorTipos.ENTERO);   :}
+        | LIT_ENTERO_OCT:x   {: RESULT = new Expresion(x, ManejadorTipos.ENTERO);   :}
+        | LIT_ENTERO_BIN:x   {: RESULT = new Expresion(x, ManejadorTipos.ENTERO);   :}
+        | LIT_FLOTANTE:x     {: RESULT = new Expresion(x, ManejadorTipos.FLOTANTE); :}
+        | LIT_CADENA:x       {: RESULT = new Expresion(x, ManejadorTipos.CADENA);   :}
+        | LIT_CARACTER:x     {: RESULT = new Expresion(x, ManejadorTipos.CARACTER); :}
+        | VERDADERO:x        {: RESULT = new Expresion(x, ManejadorTipos.BOOLEANO); :}
+        | FALSO:x            {: RESULT = new Expresion(x, ManejadorTipos.BOOLEANO); :}
+        | NULO:x             {: RESULT = new Expresion(x, ManejadorTipos.NULO);     :}
+;
+
+/* ==================================================================
+   METODOS Y SENTENCIAS
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   metodo -> tipo identificador '(' ')' '{' cuerpo_metodo '}'
+
+   No hay conflicto con  atributo ::= tipo lista_identificadores ...
+   porque tras "tipo IDENTIFICADOR" el parentesis de apertura no
+   pertenece al conjunto SIGUIENTE de lista_identificadores: con un
+   solo token de anticipacion basta para distinguirlos.
+   ------------------------------------------------------------------ */
+metodo ::= tipo:t IDENTIFICADOR:id PAR_IZQ parametros_opcionales:ps PAR_DER
+           LLAVE_IZQ cuerpo_metodo:n LLAVE_DER
+           {: parser.getTabla().cerrarAmbitoLocal(id);
+              parser.registrarMetodo(id, t, ps.size(), idleft, idright);
+
+              String firma = t + " " + id + "(" + String.join(", ", ps) + ")";
+
+              if (ps.isEmpty()) {
+                  parser.ok("Metodo sin parametros reconocido: " + firma, tleft, tright);
+              } else {
+                  parser.ok("Metodo con parametros reconocido: " + firma
+                            + " con " + ps.size() + " parametro(s)", tleft, tright);
+              }
+
+              if ("vacio".equals(t)) {
+                  parser.ok("Metodo sin valor de retorno reconocido: " + id,
+                            tleft, tright);
+              } else {
+                  parser.ok("Metodo con valor de retorno reconocido: " + id
+                            + " devuelve " + t, tleft, tright);
+              }
+
+              parser.ok("Cuerpo del metodo con " + n + " sentencia(s)", tleft, tright); :}
+
+         /* ERROR RECUPERABLE: coma sobrante al final de los parametros */
+         | tipo:t IDENTIFICADOR:id PAR_IZQ lista_parametros:ps COMA:c PAR_DER
+           LLAVE_IZQ cuerpo_metodo:n LLAVE_DER
+           {: parser.getTabla().cerrarAmbitoLocal(id);
+              parser.registrarMetodo(id, t, ps.size(), idleft, idright);
+              parser.reportarError(
+                  "sobra la coma al final de la lista de parametros",
+                  cleft, cright, sym.COMA, ",");
+              parser.recuperado("la coma final sin parametro"); :}
+
+         /* ERROR RECUPERABLE: falta el parentesis despues del nombre */
+         | tipo:t IDENTIFICADOR:id LLAVE_IZQ:li cuerpo_metodo:n LLAVE_DER
+           {: parser.getTabla().cerrarAmbitoLocal(id);
+              parser.registrarMetodo(id, t, 0, idleft, idright);
+              parser.reportarError(
+                  "se esperaba '(' despues del nombre del metodo " + id,
+                  lileft, liright, sym.LLAVE_IZQ, "{");
+              parser.recuperado("la lista de parametros ausente"); :}
+;
+
+/* ------------------------------------------------------------------
+   parametros_opcionales -> lista_parametros | vacio
+   parametro             -> tipo identificador
+   ------------------------------------------------------------------ */
+parametros_opcionales ::= lista_parametros:l
+                          {: RESULT = l;
+                             parser.ok("Lista de parametros reconocida: "
+                                       + String.join(", ", l), lleft, lright); :}
+
+                        | /* vacio */
+                          {: RESULT = new java.util.ArrayList(); :}
+;
+
+lista_parametros ::= parametro:p
+                     {: RESULT = new java.util.ArrayList(); RESULT.add(p); :}
+
+                   | lista_parametros:l COMA parametro:p
+                     {: l.add(p); RESULT = l; :}
+
+                   /* ERROR RECUPERABLE: coma duplicada entre parametros */
+                   | lista_parametros:l COMA COMA:c parametro:p
+                     {: l.add(p); RESULT = l;
+                        parser.reportarError(
+                            "se esperaba un parametro despues de la coma",
+                            cleft, cright, sym.COMA, ",");
+                        parser.recuperado("la coma sobrante entre parametros"); :}
+
+                   /* ERROR RECUPERABLE: coma inicial sin parametro */
+                   | COMA:c parametro:p
+                     {: RESULT = new java.util.ArrayList(); RESULT.add(p);
+                        parser.reportarError(
+                            "falta el parametro antes de la coma",
+                            cleft, cright, sym.COMA, ",");
+                        parser.recuperado("la coma inicial de la lista de parametros"); :}
+
+/* La coma FINAL de la lista, int a, se detecta en la regla 'metodo' y no
+   aqui: la produccion  lista_parametros ::= lista_parametros COMA
+   chocaria con la de la coma duplicada, porque ambas desplazan una coma
+   en el mismo punto. En 'metodo' el parentesis de cierre desambigua.   */
+;
+
+parametro ::= tipo:t IDENTIFICADOR:id
+              {: RESULT = t + " " + id;
+                 /* El parametro entra al ambito local ANTES de que se
+                    analice el cuerpo, porque el analizador es ascendente y
+                    esta regla se reduce antes que 'cuerpo_metodo'.        */
+                 parser.declararParametro(t, id, idleft, idright); :}
+
+            /* ERROR RECUPERABLE: parametro sin identificador */
+            | tipo:t
+              {: RESULT = t + " <sin nombre>";
+                 parser.reportarError(
+                     "se esperaba un identificador para el parametro de tipo " + t,
+                     tleft, tright, sym.IDENTIFICADOR, t);
+                 parser.recuperado("el parametro sin nombre"); :}
+;
+
+/* ------------------------------------------------------------------
+   declaracion_local -> tipo_primitivo lista_identificadores ';'
+                      | tipo_primitivo lista_identificadores '=' expresion ';'
+                      | 'constante' tipo_primitivo id '=' expresion ';'
+
+   Son las declaraciones que viven DENTRO de un metodo. Se admite solo
+   'tipo_primitivo' y no 'tipo' completo: con el identificador incluido,
+   ante  total = 5;  el analizador tendria que decidir si 'total' abre una
+   declaracion o es el destino de una asignacion, y ambas interpretaciones
+   compiten en el mismo punto.
+
+   A diferencia del atributo, aqui el valor inicial es una EXPRESION y no
+   un literal suelto, de modo que  entero doble = base * 2;  sea valido.
+   ------------------------------------------------------------------ */
+declaracion_local ::= tipo_primitivo:t lista_identificadores:ids PUNTO_COMA
+                      {: parser.declararLocales(ids, t, null);
+                         parser.ok("Declaracion local reconocida: "
+                                   + t + " " + parser.listaDeNombres(ids),
+                                   tleft, tright); :}
+
+                    | tipo_primitivo:t lista_identificadores:ids
+                      ASIGNA expresion:e PUNTO_COMA
+                      {: parser.declararLocales(ids, t, e);
+                         parser.ok("Declaracion local con inicializacion: "
+                                   + t + " " + parser.listaDeNombres(ids)
+                                   + " = " + e, tleft, tright); :}
+
+                    | CONSTANTE:c tipo_primitivo:t IDENTIFICADOR:id
+                      ASIGNA expresion:e PUNTO_COMA
+                      {: parser.getTabla().abrirAmbitoLocal("(en curso)");
+                         parser.declararConstante(id, t, e, idleft, idright);
+                         parser.ok("Declaracion de constante local reconocida: "
+                                   + t + " " + id + " = " + e, cleft, cright); :}
+;
+
+/* ---- cuerpo_metodo -> (sentencia)* ---- */
+cuerpo_metodo ::= cuerpo_metodo:c sentencia
+                  {: RESULT = Integer.valueOf(c.intValue() + 1); :}
+                | /* vacio */
+                  {: RESULT = Integer.valueOf(0); :}
+;
+
+sentencia ::= lectura     {: RESULT = Integer.valueOf(0); :}
+            | escritura   {: RESULT = Integer.valueOf(0); :}
+            | asignacion  {: RESULT = Integer.valueOf(0); :}
+
+            /* ---- Declaracion de variables y constantes locales ---- */
+            | declaracion_local {: RESULT = Integer.valueOf(0); :}
+
+            /* ---- Estructuras de control: cuentan como 1 para el anidamiento ---- */
+            | seleccion_simple    {: RESULT = Integer.valueOf(1); :}
+            | seleccion_doble     {: RESULT = Integer.valueOf(1); :}
+            | seleccion_multiple  {: RESULT = Integer.valueOf(1); :}
+            | ciclo_mientras      {: RESULT = Integer.valueOf(1); :}
+            | ciclo_hacer_mientras {: RESULT = Integer.valueOf(1); :}
+            | ciclo_para          {: RESULT = Integer.valueOf(1); :}
+
+            /* ---- Llamada a metodo utilizada como SENTENCIA ---- */
+            | llamada_metodo:c PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.ok("Llamada utilizada como sentencia: " + c, cleft, cright); :}
+
+            /* ---- retorno -> 'retornar' expresion ';' ---- */
+            | RETORNAR:r expresion:e PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.ok("Retorno reconocido: retornar " + e, rleft, rright); :}
+
+            /* ---- retorno sin expresion: valido en metodos de tipo 'vacio' ---- */
+            | RETORNAR:r PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.ok("Retorno sin expresion reconocido: retornar", rleft, rright); :}
+
+            /* ERROR RECUPERABLE: falta el parentesis de cierre de la llamada */
+            | IDENTIFICADOR:id PAR_IZQ lista_argumentos:as PUNTO_COMA:pc
+              {: RESULT = Integer.valueOf(0);
+                 parser.reportarError(
+                     "se esperaba ')' al finalizar los argumentos de " + id,
+                     pcleft, pcright, sym.PUNTO_COMA, ";");
+                 parser.recuperado("el parentesis de cierre de la llamada"); :}
+
+            /* ERROR RECUPERABLE: llamada sin parentesis */
+            | IDENTIFICADOR:id PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.reportarError(
+                     "se esperaba '(' para iniciar la llamada al metodo " + id,
+                     idleft, idright, sym.IDENTIFICADOR, id);
+                 parser.recuperado("la llamada sin parentesis"); :}
+
+            /* ---- Interrupcion de un caso ---- */
+            | ROMPER:rp PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.ok("Sentencia de interrupcion reconocida: romper",
+                           rpleft, rpright); :}
+
+            /* ERROR RECUPERABLE: 'sino' suelto, sin un 'si' que lo preceda */
+            | SINO:s bloque
+              {: RESULT = Integer.valueOf(0);
+                 parser.reportarError(
+                     "'sino' no puede aparecer sin una estructura 'si' asociada",
+                     sleft, sright, sym.SINO, "sino");
+                 parser.recuperado("el 'sino' sin 'si' asociado"); :}
+
+            /* ERROR RECUPERABLE: sentencia irreconocible.
+               El punto y coma actua como punto de sincronizacion. */
+            | error PUNTO_COMA
+              {: RESULT = Integer.valueOf(0);
+                 parser.recuperado("la sentencia mal formada"); :}
+;
+
+/* ------------------------------------------------------------------
+   lectura -> 'leer' '(' lista_identificadores ')' ';'
+   ------------------------------------------------------------------ */
+lectura ::= LEER:l PAR_IZQ lista_identificadores:ids PAR_DER PUNTO_COMA
+            {: /* Leer en una variable tambien la usa: debe estar declarada
+                  y no puede ser una constante.                           */
+               for (int i = 0; i < ids.size(); i++) {
+                   Identificador x = (Identificador) ids.get(i);
+                   parser.getTabla().destinoDeAsignacion(x.getNombre(),
+                                                         x.getLinea(),
+                                                         x.getColumna());
+               }
+               parser.ok("Sentencia de lectura reconocida: leer("
+                         + parser.listaDeNombres(ids) + ")",
+                         lleft, lright); :}
+
+          /* ERROR RECUPERABLE: contenido invalido dentro del parentesis */
+          | LEER:l PAR_IZQ error PAR_DER PUNTO_COMA
+            {: parser.recuperado("la lista de identificadores invalida de la lectura"); :}
+;
+
+/* ------------------------------------------------------------------
+   escritura -> 'imprimir' '(' lista_elementos ')' ';'
+   'imprimir' es el equivalente de 'escribir' en C++Es.
+   ------------------------------------------------------------------ */
+escritura ::= IMPRIMIR:e PAR_IZQ lista_elementos:els PAR_DER PUNTO_COMA
+              {: parser.ok("Sentencia de escritura reconocida: imprimir(" + els + ")",
+                           eleft, eright); :}
+
+            /* ERROR RECUPERABLE: falta el parentesis de cierre */
+            | IMPRIMIR PAR_IZQ lista_elementos:els PUNTO_COMA:pc
+              {: parser.reportarError(
+                     "falta el parentesis de cierre en la sentencia de escritura",
+                     pcleft, pcright, sym.PUNTO_COMA, ";");
+                 parser.recuperado("el parentesis de cierre faltante"); :}
+
+            /* ERROR RECUPERABLE: contenido invalido dentro del parentesis */
+            | IMPRIMIR:e PAR_IZQ error PAR_DER PUNTO_COMA
+              {: parser.recuperado("la lista de elementos invalida de la escritura"); :}
+;
+
+/* ---- lista_elementos -> elemento (',' elemento)* ---- */
+lista_elementos ::= elemento:e
+                    {: RESULT = e; :}
+
+                  | lista_elementos:l COMA elemento:e
+                    {: RESULT = l + ", " + e; :}
+
+                  /* ERROR RECUPERABLE: coma duplicada */
+                  | lista_elementos:l COMA COMA:c elemento:e
+                    {: RESULT = l + ", " + e;
+                       parser.reportarError("hay una coma duplicada en la lista",
+                                            cleft, cright, sym.COMA, ",");
+                       parser.recuperado("la coma sobrante"); :}
+
+                  /* ERROR RECUPERABLE: falta el primer elemento.
+                     Se escribe como CASO BASE y no como regla recursiva
+                     (COMA lista_elementos), porque esa forma choca con la
+                     recursion por la izquierda de las otras dos y produce
+                     un conflicto shift/reduce bajo el simbolo COMA.      */
+                  | COMA:c elemento:e
+                    {: RESULT = e;
+                       parser.reportarError(
+                           "falta el elemento antes de la coma en la lista",
+                           cleft, cright, sym.COMA, ",");
+                       parser.recuperado("la coma inicial sin elemento"); :}
+;
+
+/* ---- elemento -> identificador | valor | cadena | expresion ----
+   Las tres primeras alternativas del enunciado ya estan contenidas en
+   'expresion', asi que declararlas por separado haria la gramatica
+   ambigua. Se deja una sola alternativa.                              */
+elemento ::= expresion:e {: RESULT = e.getTexto(); :}
+;
+
+/* ------------------------------------------------------------------
+   asignacion -> identificador '=' expresion ';'
+   ------------------------------------------------------------------ */
+/* Sin punto y coma: es la forma que necesitan las secciones de
+   inicializacion y actualizacion del ciclo 'para'. */
+asignacion_simple ::= IDENTIFICADOR:id ASIGNA expresion:e
+                      {: RESULT = id + " = " + e;
+                         /* Aqui se concentran dos de las comprobaciones que
+                            pide el enunciado: que el destino exista y sea
+                            modificable (no una constante), y que el tipo del
+                            valor sea compatible con el tipo declarado.    */
+                         parser.verificarAsignacion(id, e, idleft, idright); :}
+;
+
+asignacion ::= asignacion_simple:a PUNTO_COMA
+               {: parser.ok("Asignacion reconocida: " + a, aleft, aright); :}
+
+             /* ERROR RECUPERABLE: falta el identificador destino */
+             | ASIGNA:a expresion:e PUNTO_COMA
+               {: parser.reportarError(
+                      "falta el identificador a la izquierda del signo igual",
+                      aleft, aright, sym.ASIGNA, "=");
+                  parser.recuperado("la asignacion sin destino"); :}
+
+             /* ERROR RECUPERABLE: expresion invalida a la derecha */
+             | IDENTIFICADOR:id ASIGNA error PUNTO_COMA
+               {: parser.recuperado("la expresion invalida de la asignacion"); :}
+;
+
+/* ==================================================================
+   EXPRESIONES ARITMETICAS Y LOGICAS
+
+   Una sola regla recursiva. La precedencia declarada arriba es la que
+   decide como se agrupan los operadores, de modo que  a + b * c  se
+   interpreta como  a + (b * c)  sin necesidad de escribir niveles de
+   no terminales.
+   ================================================================== */
+/* Cada accion hace lo mismo en tres pasos:
+     1) reconstruye el TEXTO de la expresion, para el mensaje
+     2) pide al manejador el TIPO resultante, que de paso verifica que la
+        operacion sea legal entre esos dos operandos
+     3) devuelve ambas cosas juntas en un objeto Expresion
+   El tipo sube asi de las hojas a la raiz, y cada operador verifica solo
+   a sus operandos inmediatos.                                            */
+expresion ::= expresion:a MAS:o expresion:b
+              {: String texto = a + " + " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().aritmetica("+", a, b, oleft, oright));
+                 parser.ok("Expresion aritmetica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a MENOS:o expresion:b
+              {: String texto = a + " - " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().aritmetica("-", a, b, oleft, oright));
+                 parser.ok("Expresion aritmetica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a POR:o expresion:b
+              {: String texto = a + " * " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().aritmetica("*", a, b, oleft, oright));
+                 parser.ok("Expresion aritmetica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a ENTRE:o expresion:b
+              {: String texto = a + " / " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().aritmetica("/", a, b, oleft, oright));
+                 parser.ok("Expresion aritmetica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a MODULO:o expresion:b
+              {: String texto = a + " % " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().aritmetica("%", a, b, oleft, oright));
+                 parser.ok("Expresion aritmetica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a AND_LOGICO:o expresion:b
+              {: String texto = a + " && " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().logica("&&", a, b, oleft, oright));
+                 parser.ok("Expresion logica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a OR_LOGICO:o expresion:b
+              {: String texto = a + " || " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().logica("||", a, b, oleft, oright));
+                 parser.ok("Expresion logica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | NOT_LOGICO:o expresion:a
+              {: String texto = "!" + a;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().negacion(a, oleft, oright));
+                 parser.ok("Expresion logica reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            /* Menos unario: -x. %prec le da la prioridad de NEGATIVO en
+               lugar de la del menos binario. En CUP el %prec se escribe
+               DESPUES del bloque de accion, no antes.                   */
+            | MENOS:o expresion:a
+              {: RESULT = new Expresion("-" + a,
+                     parser.getTipos().menosUnario(a, oleft, oright)); :} %prec NEGATIVO
+
+            /* El parentesis agrupa pero no altera el tipo. */
+            | PAR_IZQ expresion:a PAR_DER
+              {: RESULT = new Expresion("(" + a + ")", a.getTipo()); :}
+
+            /* ---- HOJAS DEL ARBOL ----
+               Un identificador obtiene su tipo de la Tabla de Simbolos, que
+               de paso comprueba que haya sido declarado.                  */
+            | IDENTIFICADOR:x
+              {: RESULT = new Expresion(x,
+                     parser.getTabla().tipoDelOperando(x, xleft, xright)); :}
+
+            | valor:x  {: RESULT = x; :}
+;
+
+/* ==================================================================
+   ESTRUCTURAS DE CONTROL
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   bloque -> '{' (sentencia)* '}'
+
+   Devuelve cuantas estructuras de control contiene directamente, que es
+   lo que permite detectar el anidamiento sin recorrer el arbol.
+   ------------------------------------------------------------------ */
+bloque ::= LLAVE_IZQ:a lista_sentencias:n LLAVE_DER
+           {: RESULT = n;
+              parser.ok("Bloque reconocido: " + n
+                        + " estructura(s) de control anidada(s)", aleft, aright); :}
+;
+
+lista_sentencias ::= lista_sentencias:l sentencia:s
+                     {: RESULT = Integer.valueOf(l.intValue() + s.intValue()); :}
+                   | /* vacio */
+                     {: RESULT = Integer.valueOf(0); :}
+;
+
+/* ------------------------------------------------------------------
+   condicion -> expresion
+
+   La condicion reutiliza la regla de expresion de la practica anterior,
+   que ya cubre identificadores, valores, aritmetica, logica, parentesis
+   y, desde esta practica, los operadores relacionales. Una condicion
+   simple y una compuesta son por tanto la misma regla: lo que cambia es
+   cuantos operadores se aplican.
+   ------------------------------------------------------------------ */
+condicion ::= expresion:e
+              {: RESULT = e;
+                 parser.ok("Condicion reconocida: " + e, eleft, eright); :}
+;
+
+/* ------------------------------------------------------------------
+   seleccion_simple -> 'si' '(' condicion ')' bloque
+   ------------------------------------------------------------------ */
+seleccion_simple ::= SI:s PAR_IZQ condicion:c PAR_DER bloque:n
+                     {: parser.getTipos().verificarCondicion("si", c, sleft, sright);
+                        parser.ok("Seleccion simple reconocida: si (" + c + ")",
+                                  sleft, sright);
+                        if (n.intValue() > 0) {
+                            parser.ok("Estructura anidada reconocida dentro del 'si'",
+                                      sleft, sright);
+                        } :} %prec SIN_SINO
+
+                   /* ERROR RECUPERABLE: condicion sin parentesis.
+                      Se usa el simbolo 'error' y no una produccion
+                      explicita como  SI condicion bloque, porque esa forma
+                      seria ambigua: la condicion puede empezar ella misma
+                      con un parentesis, y el analizador no podria decidir
+                      si ese parentesis es el de la estructura o el de la
+                      expresion.                                          */
+                   | SI:s error bloque
+                     {: parser.esperaba("'(' despues de 'si'", sleft, sright);
+                        parser.recuperado("la condicion mal delimitada del 'si'"); :}
+;
+
+/* ------------------------------------------------------------------
+   seleccion_doble -> 'si' '(' condicion ')' bloque 'sino' bloque
+
+   No hay conflicto de 'sino colgante' porque las llaves del bloque son
+   obligatorias: 'sino' nunca puede seguir a una sentencia suelta.
+   ------------------------------------------------------------------ */
+seleccion_doble ::= SI:s PAR_IZQ condicion:c PAR_DER bloque:n1 SINO bloque:n2
+                    {: parser.getTipos().verificarCondicion("si", c, sleft, sright);
+                       parser.ok("Seleccion doble reconocida: si (" + c + ") ... sino",
+                                 sleft, sright);
+                       if (n1.intValue() + n2.intValue() > 0) {
+                           parser.ok("Estructura anidada reconocida dentro del 'si/sino'",
+                                     sleft, sright);
+                       } :}
+;
+
+/* ------------------------------------------------------------------
+   seleccion_multiple -> 'segun' '(' expresion ')' '{' lista_casos defecto? '}'
+   ------------------------------------------------------------------ */
+seleccion_multiple ::= SEGUN:g PAR_IZQ expresion:e PAR_DER
+                       LLAVE_IZQ lista_casos:n defecto_opcional LLAVE_DER
+                       {: parser.ok("Seleccion multiple reconocida: segun (" + e
+                                    + ") con " + n + " caso(s)", gleft, gright); :}
+;
+
+lista_casos ::= lista_casos:l caso
+                {: RESULT = Integer.valueOf(l.intValue() + 1); :}
+              | caso
+                {: RESULT = Integer.valueOf(1); :}
+;
+
+caso ::= CASO:c valor:v DOS_PUNTOS cuerpo_caso
+         {: parser.ok("Caso reconocido: caso " + v, cleft, cright); :}
+
+       /* ERROR RECUPERABLE: falta el valor del caso */
+       | CASO:c DOS_PUNTOS cuerpo_caso
+         {: parser.reportarError("se esperaba un valor despues de 'caso'",
+                                 cleft, cright, sym.CASO, "caso");
+            parser.recuperado("el caso sin valor"); :}
+;
+
+defecto_opcional ::= defecto
+                   | /* vacio */
+;
+
+defecto ::= DEFECTO:d DOS_PUNTOS cuerpo_caso
+            {: parser.ok("Alternativa por defecto reconocida", dleft, dright); :}
+;
+
+cuerpo_caso ::= lista_sentencias:n {: RESULT = n; :}
+;
+
+/* ------------------------------------------------------------------
+   ciclo_mientras -> 'mientras' '(' condicion ')' bloque
+   ------------------------------------------------------------------ */
+ciclo_mientras ::= MIENTRAS:m PAR_IZQ condicion:c PAR_DER bloque:n
+                   {: parser.getTipos().verificarCondicion("mientras", c, mleft, mright);
+                      parser.ok("Ciclo mientras reconocido: mientras (" + c + ")",
+                                mleft, mright);
+                      if (n.intValue() > 0) {
+                          parser.ok("Estructura anidada reconocida dentro del 'mientras'",
+                                    mleft, mright);
+                      } :}
+
+                 /* ERROR RECUPERABLE: falta el parentesis de cierre */
+                 | MIENTRAS:m PAR_IZQ condicion:c bloque:n
+                   {: parser.reportarError(
+                          "se esperaba ')' para cerrar la condicion del ciclo mientras",
+                          nleft, nright, sym.LLAVE_IZQ, "{");
+                      parser.recuperado("el parentesis de cierre faltante"); :}
+;
+
+/* ------------------------------------------------------------------
+   ciclo_hacer_mientras -> 'hacer' bloque 'mientras' '(' condicion ')' ';'
+   ------------------------------------------------------------------ */
+ciclo_hacer_mientras ::= HACER:h bloque:n MIENTRAS PAR_IZQ condicion:c PAR_DER PUNTO_COMA
+                         {: parser.getTipos().verificarCondicion("mientras", c, hleft, hright);
+                            parser.ok("Ciclo hacer-mientras reconocido: hacer ... mientras ("
+                                      + c + ")", hleft, hright);
+                            if (n.intValue() > 0) {
+                                parser.ok("Estructura anidada reconocida dentro del 'hacer'",
+                                          hleft, hright);
+                            } :}
+;
+
+/* ------------------------------------------------------------------
+   ciclo_para -> 'para' '(' inicializacion ';' condicion ';' actualizacion ')' bloque
+   ------------------------------------------------------------------ */
+ciclo_para ::= PARA:p PAR_IZQ asignacion_simple:ini PUNTO_COMA condicion:c
+               PUNTO_COMA asignacion_simple:act PAR_DER bloque:n
+               {: parser.getTipos().verificarCondicion("para", c, pleft, pright);
+                  parser.ok("Ciclo para reconocido: para (" + ini + "; " + c
+                            + "; " + act + ")", pleft, pright);
+                  if (n.intValue() > 0) {
+                      parser.ok("Estructura anidada reconocida dentro del 'para'",
+                                pleft, pright);
+                  } :}
+
+             /* ERROR RECUPERABLE: falta la seccion de actualizacion */
+             | PARA:p PAR_IZQ asignacion_simple:ini PUNTO_COMA condicion:c PAR_DER:pd bloque:n
+               {: parser.reportarError(
+                      "se esperaba la seccion de actualizacion del ciclo 'para'",
+                      pdleft, pdright, sym.PAR_DER, ")");
+                  parser.recuperado("el ciclo 'para' sin actualizacion"); :}
+;
+
+/* ==================================================================
+   OPERADORES RELACIONALES
+   Se agregan a la regla 'expresion' para que una condicion pueda ser
+   simple (a > b) o compuesta (a > b && activo) sin reglas aparte.
+   ================================================================== */
+/* El resultado de toda expresion relacional es SIEMPRE booleano, sean
+   cuales sean los operandos. Los operadores de orden exigen operandos
+   numericos; la igualdad admite ademas booleanos y cadenas, siempre que
+   ambos lados pertenezcan al mismo grupo.                               */
+expresion ::= expresion:a MENOR:o expresion:b
+              {: String texto = a + " < " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().relacionalDeOrden("<", a, b, oleft, oright));
+                 parser.ok("Expresion relacional reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a MAYOR:o expresion:b
+              {: String texto = a + " > " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().relacionalDeOrden(">", a, b, oleft, oright));
+                 parser.ok("Expresion relacional reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a MENOR_IGUAL:o expresion:b
+              {: String texto = a + " <= " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().relacionalDeOrden("<=", a, b, oleft, oright));
+                 parser.ok("Expresion relacional reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a MAYOR_IGUAL:o expresion:b
+              {: String texto = a + " >= " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().relacionalDeOrden(">=", a, b, oleft, oright));
+                 parser.ok("Expresion relacional reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a IGUAL:o expresion:b
+              {: String texto = a + " == " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().igualdad("==", a, b, oleft, oright));
+                 parser.ok("Expresion relacional reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+
+            | expresion:a DIFERENTE:o expresion:b
+              {: String texto = a + " != " + b;
+                 RESULT = new Expresion(texto,
+                     parser.getTipos().igualdad("!=", a, b, oleft, oright));
+                 parser.ok("Expresion relacional reconocida: " + texto
+                           + "   -> tipo " + RESULT.getTipo(), oleft, oright); :}
+;
+
+/* ==================================================================
+   LLAMADAS A METODOS
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   llamada_metodo -> identificador '(' lista_argumentos? ')'
+
+   El MISMO no terminal sirve para los dos usos que pide el enunciado:
+   como sentencia  (sentencia ::= llamada_metodo ';')  y dentro de una
+   expresion  (expresion ::= llamada_metodo).  No hay conflicto porque
+   los dos usos se alcanzan desde estados distintos del analizador: una
+   expresion suelta no es una sentencia valida.
+   ------------------------------------------------------------------ */
+llamada_metodo ::= IDENTIFICADOR:id PAR_IZQ PAR_DER
+                   {: String texto = id + "()";
+                      parser.ok("Llamada a metodo sin argumentos: " + texto,
+                                idleft, idright);
+                      /* El tipo de la llamada es el tipo de retorno del
+                         metodo, consultado en la Tabla de Simbolos. Eso es
+                         lo que permite usarla dentro de una expresion.   */
+                      RESULT = new Expresion(texto,
+                          parser.verificarLlamada(id, 0, idleft, idright)); :}
+
+                 | IDENTIFICADOR:id PAR_IZQ lista_argumentos:as PAR_DER
+                   {: String texto = id + "(" + parser.textos(as) + ")";
+                      parser.ok("Lista de argumentos reconocida: "
+                                + parser.textos(as), idleft, idright);
+                      parser.ok("Llamada a metodo con argumentos: " + texto,
+                                idleft, idright);
+                      RESULT = new Expresion(texto,
+                          parser.verificarLlamada(id, as.size(), idleft, idright)); :}
+
+/* El parentesis de cierre faltante NO se detecta aqui. La produccion
+   IDENTIFICADOR PAR_IZQ lista_argumentos chocaria con la de la coma
+   faltante (lista_argumentos ::= lista_argumentos expresion): tras los
+   argumentos, un token que inicia expresion podria significar "falta una
+   coma" o "falta el parentesis y empieza otra sentencia", y con un solo
+   token de anticipacion no hay forma de decidir. Se detecta en el nivel
+   de sentencia, donde el punto y coma siguiente desambigua. */
+;
+
+/* ------------------------------------------------------------------
+   lista_argumentos -> expresion ( ',' expresion )*
+
+   Devuelve la lista de argumentos y no solo su texto, porque hace falta
+   CONTARLOS para la validacion semantica de la llamada.
+   ------------------------------------------------------------------ */
+lista_argumentos ::= expresion:e
+                     {: RESULT = new java.util.ArrayList(); RESULT.add(e); :}
+
+                   | lista_argumentos:l COMA expresion:e
+                     {: l.add(e); RESULT = l; :}
+
+                   /* ERROR RECUPERABLE: coma duplicada */
+                   | lista_argumentos:l COMA COMA:c expresion:e
+                     {: l.add(e); RESULT = l;
+                        parser.reportarError(
+                            "se esperaba una expresion despues de la coma",
+                            cleft, cright, sym.COMA, ",");
+                        parser.recuperado("la coma sobrante entre argumentos"); :}
+
+                   /* ERROR RECUPERABLE: falta el primer argumento */
+                   | COMA:c expresion:e
+                     {: RESULT = new java.util.ArrayList(); RESULT.add(e);
+                        parser.reportarError("se esperaba un argumento antes de la coma",
+                                             cleft, cright, sym.COMA, ",");
+                        parser.recuperado("la coma inicial sin argumento"); :}
+
+                   /* ERROR RECUPERABLE: falta la coma separadora.
+                      Se limita a un IDENTIFICADOR y no a una expresion
+                      completa: con 'expresion' el conjunto SIGUIENTE de
+                      expresion absorberia su propio conjunto PRIMERO, y
+                      el parentesis de apertura dejaria de distinguir
+                      "identificador suelto" de "llamada a metodo".      */
+                   | lista_argumentos:l IDENTIFICADOR:e
+                     {: l.add(new Expresion(e,
+                            parser.getTabla().tipoDelOperando(e, eleft, eright)));
+                        RESULT = l;
+                        parser.reportarError(
+                            "falta una coma entre los argumentos de la llamada",
+                            eleft, eright, sym.COMA, ",");
+                        parser.recuperado("la coma faltante entre argumentos"); :}
+
+/* La coma FINAL sobrante en los argumentos, sumar(10,), tampoco se
+   detecta: la produccion  lista_argumentos ::= lista_argumentos COMA
+   chocaria otra vez con la de la coma faltante, porque tras la coma un
+   token que inicia expresion podria continuar la lista o cerrar la
+   deteccion del error. Se eligio conservar la deteccion de la coma
+   FALTANTE, sumar(a b), que si figura entre los requisitos minimos. */
+;
+
+/* ------------------------------------------------------------------
+   Llamada utilizada DENTRO de una expresion.
+   Permite  resultado = sumar(a, b);  y tambien  si (esMayor(a, b)) { }
+   ------------------------------------------------------------------ */
+expresion ::= llamada_metodo:c {: RESULT = c; :}
 ;

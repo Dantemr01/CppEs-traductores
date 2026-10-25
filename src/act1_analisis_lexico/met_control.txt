@@ -1,0 +1,56 @@
+/*
+   EJECUCION 2: METODOS CON EXPRESIONES Y ESTRUCTURAS DE CONTROL
+   Un metodo llama a otro, y las llamadas se usan dentro de condiciones.
+*/
+
+#incluir <flujo_es>
+
+clase Calculos {
+
+    entero resultado, total, i;
+
+    entero sumar(entero a, entero b) {
+        retornar a + b;
+    }
+
+    booleano esPar(entero numero) {
+        retornar numero % 2 == 0;
+    }
+
+    entero calcular(entero a, entero b) {
+        resultado = a + b;
+        si (resultado > 100) {
+            resultado = resultado * 2;
+        } sino {
+            resultado = resultado + 10;
+        }
+        retornar resultado;
+    }
+
+    entero calcularTotal(entero x, entero y) {
+        resultado = sumar(x, y);
+        retornar resultado;
+    }
+
+    vacio proceso() {
+        total = calcular(20, 30);
+
+        si (esPar(total)) {
+            imprimir("El total es par");
+        } sino {
+            imprimir("El total es impar");
+        }
+
+        mientras (total < 100) {
+            total = total + 10;
+        }
+
+        para (i = 0; i < 10; i = i + 1) {
+            resultado = calcular(i, i);
+            imprimir(resultado);
+        }
+
+        imprimir(total);
+    }
+
+};

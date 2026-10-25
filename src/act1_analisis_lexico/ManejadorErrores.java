@@ -5,6 +5,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Manejador de errores lexicos.
+ *
+ * Centraliza el reporte de errores en lugar de dispersar llamadas a
+ * System.out por todo el archivo .jflex. Se encarga de tres cosas:
+ *
+ *   1. Clasificar cada error en una de las categorias de la practica.
+ *   2. Imprimirlo de inmediato con toda la informacion necesaria para
+ *      localizarlo y corregirlo: tipo, linea, columna, lexema, descripcion
+ *      y una sugerencia concreta.
+ *   3. Acumularlos para emitir al final un resumen agrupado por categoria.
+ *
+ * El analisis NUNCA se detiene al encontrar un error: se reporta y se
+ * continua, de modo que una sola corrida muestre todos los problemas del
+ * archivo fuente (recuperacion de errores).
+ */
 public class ManejadorErrores {
 
     /** Categorias de error pedidas por la practica. */
@@ -24,6 +40,7 @@ public class ManejadorErrores {
         public String getEtiqueta() { return etiqueta; }
     }
 
+    /** Un error individual, con toda su informacion de diagnostico. */
     public static class ErrorLexico {
         public final Tipo   tipo;
         public final int    linea;
@@ -45,7 +62,10 @@ public class ManejadorErrores {
 
     private final List<ErrorLexico> errores = new ArrayList<>();
 
-     /* Registra un error y lo imprime en el momento*/
+    /**
+     * Registra un error y lo imprime en el momento, intercalado con los
+     * tokens, para que se vea exactamente en que punto del archivo ocurrio.
+     */
     public void reportar(Tipo tipo, int linea, int columna,
                          String lexema, String descripcion, String sugerencia) {
 
@@ -57,6 +77,7 @@ public class ManejadorErrores {
         System.out.println("          Sugerencia: " + sugerencia);
     }
 
+    /** Vuelve imprimibles los saltos de linea y tabuladores del lexema. */
     private static String visible(String texto) {
         String limpio = texto.replace("\r", "\\r")
                              .replace("\n", "\\n")
@@ -81,7 +102,7 @@ public class ManejadorErrores {
         return errores;
     }
 
-    /* Cuantos errores hubo de cada categoria. */
+    /** Cuantos errores hubo de cada categoria. */
     public Map<Tipo, Integer> conteoPorTipo() {
         Map<Tipo, Integer> conteo = new LinkedHashMap<>();
         for (Tipo t : Tipo.values()) {
@@ -93,7 +114,7 @@ public class ManejadorErrores {
         return conteo;
     }
 
-    /* Tabla final agrupada por categoria. */
+    /** Tabla final agrupada por categoria. */
     public void imprimirResumen() {
         System.out.println();
         System.out.println("--------------------------------------------------");

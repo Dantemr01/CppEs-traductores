@@ -1,0 +1,17 @@
+/*
+   EJECUCION 2: CODIGO INVALIDO
+   Tres errores: falta de coma entre identificadores, constante sin
+   inicializacion y declaracion incompleta.
+*/
+
+#incluir <flujo_es>
+
+clase Persona {
+
+    entero edad nombre;
+
+    constante entero MAXIMO;
+
+    flotante;
+
+};

@@ -1,0 +1,52 @@
+/*
+   EJECUCION 2: ERRORES SEMANTICOS
+
+   Los cinco errores que pide el enunciado, en el mismo orden en que los
+   enumera. La estructura del archivo es SINTACTICAMENTE CORRECTA: no debe
+   aparecer ningun error de sintaxis, solo de tipos.
+*/
+
+#incluir <flujo_es>
+
+clase EvaluadorErrores {
+
+    entero   contador = 5;
+    booleano bandera  = falso;
+
+    constante entero LIMITE = 100;
+
+    vacio ejecutar() {
+        entero   a;
+        booleano b;
+
+        /* Error 1: asignacion incompatible, cadena en una variable entera */
+        a = "Hola mundo";
+
+        /* Error 2: operacion aritmetica con un operando booleano */
+        contador = bandera * 10;
+
+        /* Error 3: condicion con una expresion entera en lugar de booleana */
+        si (contador + 5) {
+            imprimir("Error");
+        }
+
+        /* Error 4: reasignacion de una constante */
+        LIMITE = 200;
+
+        /* Error 5: uso de una variable no declarada */
+        a = variableInexistente + 2;
+
+        /* Error 6: un booleano no admite un valor numerico */
+        b = 5;
+
+        /* Error 7: conversion estrechadora, se pierde precision */
+        a = 2.5;
+
+        /* Error 8: el operador modulo exige operandos enteros */
+        a = contador % 1.5;
+
+        /* Error 9: el operador logico exige operandos booleanos */
+        b = contador && bandera;
+    }
+
+};

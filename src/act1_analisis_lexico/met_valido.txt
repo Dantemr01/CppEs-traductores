@@ -1,0 +1,50 @@
+/*
+   EJECUCION 1: CODIGO VALIDO
+   Las cuatro combinaciones de parametros y retorno, mas llamadas con y
+   sin argumentos y llamadas dentro de expresiones.
+*/
+
+#incluir <flujo_es>
+
+clase Operaciones {
+
+    entero resultado, valor, total;
+
+    vacio iniciar() {
+        imprimir("Inicio del programa");
+    }
+
+    vacio mostrar(entero valor) {
+        imprimir(valor);
+    }
+
+    entero sumar(entero a, entero b) {
+        retornar a + b;
+    }
+
+    entero obtenerValor() {
+        retornar 100;
+    }
+
+    booleano esMayor(entero a, entero b) {
+        retornar a > b;
+    }
+
+    vacio procesar(entero edad, booleano activo, flotante promedio) {
+        imprimir(edad);
+        imprimir(activo);
+        imprimir(promedio);
+    }
+
+    vacio proceso() {
+        iniciar();
+        mostrar(10);
+        resultado = sumar(5, 10);
+        valor = obtenerValor();
+        total = sumar(1, 2) + sumar(3, 4);
+        imprimir(resultado);
+        imprimir(valor);
+        retornar;
+    }
+
+};

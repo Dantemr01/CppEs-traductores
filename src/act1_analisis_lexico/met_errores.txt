@@ -1,0 +1,34 @@
+/*
+   EJECUCION 3: CODIGO INVALIDO
+   Los ocho errores que exige el enunciado.
+*/
+
+#incluir <flujo_es>
+
+clase Fallas {
+
+    vacio iniciar {
+        imprimir("Inicio");
+    }
+
+    entero sumar(entero a,, entero b) {
+        retornar a + b;
+    }
+
+    entero restar(entero a, entero) {
+        retornar a;
+    }
+
+    vacio mostrar(entero valor,) {
+        imprimir(valor);
+    }
+
+    vacio proceso() {
+        iniciar;
+        sumar(a,,b);
+        sumar(,b);
+        sumar(a b);
+        sumar(a,b;
+    }
+
+};

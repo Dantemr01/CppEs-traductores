@@ -1,0 +1,71 @@
+/*
+   EJECUCION 1: CODIGO SEMANTICAMENTE VALIDO
+
+   Es el ejemplo del enunciado traducido a C++Es, ampliado con las demas
+   reglas de la matriz de compatibilidad. No debe producir ningun error.
+*/
+
+#incluir <flujo_es>
+
+clase Evaluador {
+
+    entero   base     = 10;
+    flotante factor   = 2.5;
+    booleano esActivo = verdadero;
+    cadena   titulo   = "Reporte";
+
+    constante flotante PI = 3.1416;
+    constante entero   TOPE = 100;
+
+    entero sumar(entero a, entero b) {
+        retornar a + b;
+    }
+
+    booleano esPar(entero numero) {
+        retornar numero % 2 == 0;
+    }
+
+    vacio ejecutar() {
+        entero   resultado;
+        flotante calculoComplejo;
+        booleano condicion;
+
+        /* Aritmetica entre enteros: el resultado es entero */
+        resultado = base * 5;
+
+        /* Promocion: entero con flotante da flotante */
+        calculoComplejo = (base + factor) * PI;
+
+        /* Relacional sobre enteros y logica sobre booleanos */
+        condicion = (resultado > 20) && esActivo;
+
+        /* Lectura de una constante dentro de una expresion */
+        calculoComplejo = PI * 2.0;
+        condicion = resultado < TOPE;
+
+        /* Ampliacion valida: un entero cabe en un flotante */
+        calculoComplejo = base;
+
+        /* Modulo entre enteros */
+        resultado = base % 3;
+
+        /* Negacion logica */
+        condicion = !esActivo;
+
+        /* Llamadas a metodos dentro de expresiones, con su tipo de retorno */
+        resultado = sumar(base, 5) + 1;
+        condicion = esPar(resultado);
+
+        /* Concatenacion de cadenas */
+        titulo = titulo + " final";
+
+        si (condicion) {
+            imprimir("Calculo correcto");
+        }
+
+        mientras (resultado < TOPE) {
+            resultado = resultado + 10;
+        }
+    }
+
+};

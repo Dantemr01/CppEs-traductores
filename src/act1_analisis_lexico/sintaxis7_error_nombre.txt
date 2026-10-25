@@ -1,0 +1,10 @@
+/*
+   Caso 7: ERROR en el nombre de la clase.
+   Un identificador no puede comenzar con un digito, asi que
+   "2Alumno" ni siquiera llega al analizador sintactico como
+   IDENTIFICADOR: el analizador lexico ya lo rechaza.
+*/
+
+#incluir <flujo_es>
+
+clase 2Alumno { };

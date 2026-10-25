@@ -1,0 +1,7 @@
+/*
+   Caso 3: minimo valido.
+   Sin importaciones y sin espacio de nombres: solo la clase principal,
+   que es el unico elemento obligatorio.
+*/
+
+clase Principal { };

@@ -1,0 +1,62 @@
+/*
+   EJECUCION 4: TABLA DE SIMBOLOS E INMUTABILIDAD
+
+   Muestra las cuatro categorias de identificador conviviendo (atributo,
+   constante, parametro y variable local), como se consultan desde las
+   expresiones y como se comporta el ambito.
+*/
+
+#incluir <flujo_es>
+
+entero contadorGlobal = 0;
+constante cadena NOMBRE = "C++Es";
+
+clase Inventario {
+
+    entero   existencias = 50;
+    flotante precio      = 19.99;
+
+    constante entero   MINIMO = 10;
+    constante flotante IVA    = 0.16;
+
+    /* Los parametros viven en el ambito local del metodo */
+    flotante calcularTotal(entero cantidad, flotante descuento) {
+        flotante subtotal;
+        flotante total;
+
+        subtotal = precio * cantidad;        /* atributo y parametro juntos */
+        total    = subtotal - descuento;
+        total    = total + total * IVA;      /* lectura de una constante    */
+
+        retornar total;
+    }
+
+    booleano necesitaReposicion(entero actual) {
+        retornar actual < MINIMO;
+    }
+
+    vacio ejecutar() {
+        flotante importe;
+        booleano alerta;
+        constante entero MAXIMO = 500;
+
+        importe = calcularTotal(3, 5.0);
+        alerta  = necesitaReposicion(existencias);
+
+        si (alerta) {
+            imprimir("Reponer inventario");
+        }
+
+        /* Lectura de una constante en una expresion: PERMITIDA */
+        alerta = existencias < MAXIMO;
+
+        /* Reasignacion de constantes: PROHIBIDA en los tres ambitos */
+        MINIMO = 20;        /* constante de clase  */
+        MAXIMO = 600;       /* constante local     */
+        NOMBRE = "otro";    /* constante global    */
+
+        /* 'subtotal' era local de calcularTotal: aqui ya no existe */
+        importe = subtotal;
+    }
+
+};

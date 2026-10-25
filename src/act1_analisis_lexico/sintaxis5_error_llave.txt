@@ -1,0 +1,8 @@
+/*
+   Caso 5: ERROR de llaves.
+   La clase abre con { pero nunca cierra con }.
+*/
+
+#incluir <flujo_es>
+
+clase Documento { ;
