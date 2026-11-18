@@ -1,0 +1,8 @@
+/*
+   Errores en la CLASE PRINCIPAL:
+   la llave de apertura nunca se cierra.
+*/
+
+#incluir <flujo_es>
+
+clase Documento { ;

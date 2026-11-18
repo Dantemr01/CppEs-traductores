@@ -1,0 +1,12 @@
+/*
+   Caso 1: estructura COMPLETA.
+   Contiene los tres elementos: importaciones, espacio de nombres y clase.
+*/
+
+#incluir <flujo_es>
+#incluir <cadena_es>
+#incluir "utilerias.hes"
+
+usando espacio_nombres estd::sistema;
+
+clase Estudiante { };

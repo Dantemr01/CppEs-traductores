@@ -1,0 +1,21 @@
+/*
+   ARCHIVO 2: PROGRAMA CON ERRORES SINTACTICOS RECUPERABLES
+
+   Contiene cuatro errores de los tres tipos pedidos: importaciones,
+   paquete y clase principal. Despues de cada uno el analizador se
+   resincroniza y continua, de modo que una sola ejecucion los muestra
+   todos y el analisis llega hasta el final.
+
+   El error estructural FATAL se prueba aparte, en error_fatal.txt,
+   porque por definicion detiene el analisis y ocultaria a los demas.
+*/
+
+#incluir <flujo_es>;
+
+#incluir <cadena_es
+
+#incluir <vector_es>
+
+usando espacio_nombres estd::sistema
+
+clase { };

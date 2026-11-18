@@ -1,0 +1,69 @@
+/*
+   PRUEBA 2: ERRORES SEMANTICOS DE CONTROL, METODOS Y CLASES
+
+   Es el ejemplo invalido del enunciado traducido a C++Es. Cada comentario
+   anuncia el error que la linea siguiente debe provocar.
+*/
+
+#incluir <flujo_es>
+
+clase CalculadoraErrores {
+
+    entero base = 10;
+
+    entero sumar(entero a, entero b) {
+        retornar a + b;
+    }
+
+    /* Error: el tipo retornado no coincide con el declarado */
+    entero obtenerEdad() {
+        retornar "veinticinco";
+    }
+
+    /* Error: un metodo no vacio sin ningun retorno con valor */
+    entero obtenerBase() {
+        imprimir(base);
+    }
+
+    /* Error: un metodo vacio no puede devolver un valor */
+    vacio reportar() {
+        retornar base;
+    }
+
+    vacio ejecutar() {
+        entero   resultado = 0;
+        booleano activo    = falso;
+
+        /* Error: la condicion de 'si' debe ser booleana */
+        si (resultado) {
+            imprimir("Error");
+        }
+
+        /* Error: numero incorrecto de argumentos */
+        resultado = sumar(10);
+
+        /* Error: tipo incompatible en el primer argumento */
+        resultado = sumar("Hola", 20);
+
+        /* Error: el metodo no esta declarado */
+        resultado = multiplicar(2, 3);
+
+        /* Error: 'romper' fuera de un ciclo o de un 'segun' */
+        romper;
+
+        /* Error: 'continuar' fuera de un ciclo */
+        continuar;
+
+        /* Error: la condicion de 'mientras' debe ser booleana */
+        mientras ("activo") {
+            resultado = resultado + 1;
+        }
+
+        /* Error: identificador no declarado en este ambito */
+        resultado = valorLocal;
+
+        /* Error: el atributo no esta declarado en la clase */
+        resultado = limite;
+    }
+
+};

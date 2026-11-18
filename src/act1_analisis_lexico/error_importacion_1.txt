@@ -1,0 +1,12 @@
+/*
+   Errores en las IMPORTACIONES:
+   ruta incompleta (falta el signo de mayor que) y punto y coma sobrante.
+*/
+
+#incluir <flujo_es
+
+#incluir <cadena_es>;
+
+#incluir <vector_es>
+
+clase Catalogo { };

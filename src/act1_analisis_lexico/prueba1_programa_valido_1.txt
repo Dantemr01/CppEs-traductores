@@ -1,0 +1,111 @@
+#incluir <flujo_es>
+#incluir "utilerias.hes"
+#definir MAXIMO 100
+
+usando espacio_nombres estandar;
+
+/*
+   Prueba 1: programa valido completo
+   Cubre palabras reservadas, identificadores, literales,
+   operadores, cadenas y los dos tipos de comentario.
+*/
+
+clase Estudiante {
+publico:
+    cadena nombre;
+    entero edad;
+    flotante promedio;
+
+    Estudiante(cadena n, entero e, flotante p) {
+        este->nombre = n;
+        este->edad = e;
+        este->promedio = p;
+    }
+
+    booleano aprobado() constante {
+        retornar promedio >= 7.0;   // comparacion con flotante
+    }
+};
+
+entero factorial(entero n) {
+    si (n <= 1) {
+        retornar 1;
+    } sino {
+        retornar n * factorial(n - 1);
+    }
+}
+
+entero principal() {
+    entero contador = 0;
+    entero acumulado = 0;
+    flotante tasa = 3.1416;
+    doble precision = 2.71828e-3;
+    caracter inicial = 'A';
+    caracter salto = '\n';
+    booleano activo = verdadero;
+    cadena saludo = "Hola \"mundo\" en C++Es\n";
+
+    entero mascara = 0xFF;         // hexadecimal
+    entero permisos = 0755;        // octal
+    entero banderas = 0b1010;      // binario
+    largo total = 123456789L;
+    sin_signo largo grande = 42UL;
+
+    entero numeros[MAXIMO];
+    entero* apuntador = &contador;
+
+    para (entero i = 0; i < 10; i++) {
+        numeros[i] = i * i;
+        acumulado += numeros[i];
+    }
+
+    mientras (contador < 5) {
+        contador = contador + 1;
+        si (contador % 2 == 0 && activo) {
+            continuar;
+        }
+        si (contador > 3 || !activo) {
+            romper;
+        }
+    }
+
+    hacer {
+        contador--;
+    } mientras (contador > 0);
+
+    segun (contador) {
+        caso 0:
+            imprimir << "cero" << fin_linea;
+            romper;
+        caso 1:
+            imprimir << "uno" << fin_linea;
+            romper;
+        defecto:
+            imprimir << "otro" << fin_linea;
+    }
+
+    Estudiante* alumno = nuevo Estudiante("Ana Perez", 20, 8.5);
+    si (alumno->aprobado()) {
+        imprimir << alumno->nombre << " aprobo" << fin_linea;
+    }
+    borrar alumno;
+
+    entero desplazado = mascara << 2;
+    entero recuperado = desplazado >> 2;
+    entero combinado = mascara & permisos | banderas ^ 0x0F;
+    entero invertido = ~mascara;
+    entero ternario = (contador > 0) ? 1 : -1;
+
+    leer >> contador;
+    imprimir << "Resultado: " << acumulado << fin_linea;
+
+    intentar {
+        si (contador == 0) {
+            lanzar "division entre cero";
+        }
+    } capturar (cadena mensaje) {
+        imprimir << mensaje << fin_linea;
+    }
+
+    retornar 0;
+}

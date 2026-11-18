@@ -1,0 +1,58 @@
+/*
+   PRUEBA 3: CLASES, MIEMBROS Y MODIFICADORES DE ACCESO
+
+   Verifica el acceso de la forma  objeto.miembro :
+     - que el objeto este declarado
+     - que su tipo sea una clase conocida
+     - que el miembro exista en esa clase
+     - que las llamadas a metodos de un objeto respeten la firma
+
+   El objeto se declara como variable global. No se exige inicializarla
+   porque en C++ las variables globales se inicializan automaticamente,
+   a diferencia de las locales.
+*/
+
+#incluir <flujo_es>
+
+Calculadora instancia;
+
+clase Calculadora {
+
+    publico  entero base    = 10;
+    privado  entero secreto = 5;
+
+    publico entero duplicar(entero valor) {
+        retornar valor * 2;
+    }
+
+    publico vacio probar() {
+        entero resultado = 0;
+
+        /* ---- Accesos validos ---- */
+
+        resultado = instancia.base;             /* atributo publico */
+        resultado = instancia.secreto;          /* privado, pero desde la
+                                                   propia clase: permitido */
+        resultado = instancia.duplicar(4);      /* llamada con firma correcta */
+
+        instancia.duplicar(7);                  /* llamada como sentencia */
+
+        /* ---- Accesos invalidos ---- */
+
+        /* Error: el miembro no existe en la clase */
+        resultado = instancia.limite;
+
+        /* Error: cantidad de argumentos incorrecta en la llamada */
+        resultado = instancia.duplicar(1, 2);
+
+        /* Error: 'base' es un entero, no una clase */
+        resultado = base.duplicar(3);
+
+        /* Error: el objeto no esta declarado */
+        resultado = otroObjeto.base;
+
+        /* Error: el miembro es un metodo y faltan los parentesis */
+        resultado = instancia.duplicar;
+    }
+
+};

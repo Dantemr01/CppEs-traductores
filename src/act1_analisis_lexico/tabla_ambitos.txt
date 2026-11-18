@@ -1,0 +1,48 @@
+/*
+   PRUEBA 3: LAS CINCO CATEGORIAS Y LOS TRES AMBITOS
+
+   Un programa valido mas completo que el anterior, pensado para que la
+   tabla de simbolos muestre a la vez:
+
+     - las cinco categorias: CLASE, ATRIBUTO, CONSTANTE, METODO, VARIABLE
+     - los tres ambitos: GLOBAL, el de la clase y el de cada metodo
+     - atributos con y sin valor inicial (la inicializacion es opcional)
+     - dos metodos con una variable local del MISMO nombre, para comprobar
+       que los ambitos evitan la colision entre ellas
+*/
+
+#incluir <flujo_es>
+
+entero contadorGlobal = 0;
+constante cadena NOMBRE_SISTEMA = "CppEs";
+
+clase ControlInventario {
+
+    entero   existencias;
+    entero   totalVendido = 0;
+    flotante precioUnitario = 19.99;
+    booleano activo = verdadero;
+
+    constante entero   STOCK_MINIMO = 10;
+    constante flotante IVA = 0.16;
+
+    flotante calcularTotal(entero cantidad, flotante descuento) {
+        flotante subtotal = precioUnitario * cantidad;
+        flotante total    = subtotal - descuento;
+
+        retornar total + total * IVA;
+    }
+
+    booleano necesitaReposicion(entero actual) {
+        booleano total = actual < STOCK_MINIMO;
+
+        retornar total;
+    }
+
+    vacio reportar() {
+        entero cantidad = existencias + totalVendido;
+
+        imprimir(cantidad);
+    }
+
+};

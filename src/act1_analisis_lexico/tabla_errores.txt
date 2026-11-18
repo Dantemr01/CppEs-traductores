@@ -1,0 +1,28 @@
+/*
+   PRUEBA 2: ERRORES DE LA TABLA DE SIMBOLOS
+
+   Es el ejemplo invalido del enunciado traducido a C++Es. Debe detectar
+   los seis errores que el enunciado enumera como minimo:
+
+     1. mi_sistema          no cumple PascalCase
+     2. AtributoIncorrecto  no cumple camelCase
+     3. VALOR_CONSTANTE     constante sin inicializar
+     4. x                   variable local sin inicializar
+     5. x                   identificador duplicado en el mismo ambito
+     6. z                   identificador no declarado
+*/
+
+#incluir <flujo_es>
+
+clase mi_sistema {
+
+    entero AtributoIncorrecto;
+
+    constante flotante VALOR_CONSTANTE;
+
+    vacio proceso() {
+        entero x;
+        entero x = z + 10;
+    }
+
+};

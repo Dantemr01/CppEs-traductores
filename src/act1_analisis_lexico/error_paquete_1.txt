@@ -1,0 +1,10 @@
+/*
+   Errores en el PAQUETE (espacio de nombres):
+   falta el punto y coma final.
+*/
+
+#incluir <flujo_es>
+
+usando espacio_nombres estd::sistema
+
+clase Reporte { };

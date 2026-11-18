@@ -26,9 +26,9 @@ clase Evaluador {
     }
 
     vacio ejecutar() {
-        entero   resultado;
-        flotante calculoComplejo;
-        booleano condicion;
+        entero   resultado = 0;
+        flotante calculoComplejo = 0.0;
+        booleano condicion = falso;
 
         /* Aritmetica entre enteros: el resultado es entero */
         resultado = base * 5;

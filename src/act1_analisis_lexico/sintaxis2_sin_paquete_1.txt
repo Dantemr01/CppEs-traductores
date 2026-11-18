@@ -1,0 +1,10 @@
+/*
+   Caso 2: sin espacio de nombres.
+   El "paquete" es opcional, asi que el archivo puede iniciar
+   directamente con las importaciones.
+*/
+
+#incluir <flujo_es>
+#incluir <vector_es>
+
+clase Inventario { };

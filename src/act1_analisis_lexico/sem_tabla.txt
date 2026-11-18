@@ -21,8 +21,8 @@ clase Inventario {
 
     /* Los parametros viven en el ambito local del metodo */
     flotante calcularTotal(entero cantidad, flotante descuento) {
-        flotante subtotal;
-        flotante total;
+        flotante subtotal = 0.0;
+        flotante total = 0.0;
 
         subtotal = precio * cantidad;        /* atributo y parametro juntos */
         total    = subtotal - descuento;
@@ -36,8 +36,8 @@ clase Inventario {
     }
 
     vacio ejecutar() {
-        flotante importe;
-        booleano alerta;
+        flotante importe = 0.0;
+        booleano alerta = falso;
         constante entero MAXIMO = 500;
 
         importe = calcularTotal(3, 5.0);

@@ -1,0 +1,9 @@
+/*
+   Caso 6: ERROR por clase duplicada.
+   La gramatica admite EXACTAMENTE una clase principal por archivo.
+*/
+
+#incluir <flujo_es>
+
+clase Primera { };
+clase Segunda { };

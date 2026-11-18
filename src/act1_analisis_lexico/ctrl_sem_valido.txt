@@ -1,0 +1,86 @@
+/*
+   PRUEBA 1: CODIGO SEMANTICAMENTE VALIDO
+
+   Es el ejemplo valido del enunciado traducido a C++Es, ampliado con las
+   demas construcciones que la practica pide verificar: modificadores de
+   acceso, romper y continuar dentro de ciclos, segun con romper, y las
+   tres formas de retorno. No debe producir ningun error.
+*/
+
+#incluir <flujo_es>
+
+clase Calculadora {
+
+    privado entero   base   = 10;
+    publico booleano activo = verdadero;
+
+    publico constante entero LIMITE = 100;
+
+    publico entero sumar(entero a, entero b) {
+        retornar a + b;
+    }
+
+    publico booleano esMayor(entero valor) {
+        retornar valor > base;
+    }
+
+    privado entero duplicar(entero valor) {
+        retornar valor * 2;
+    }
+
+    publico vacio ejecutar() {
+        entero   resultado = 0;
+        booleano condicion = falso;
+        entero   contador  = 0;
+        entero   acumulado = 0;
+
+        /* Llamada con la cantidad y los tipos correctos */
+        resultado = sumar(10, 20);
+        condicion = esMayor(resultado);
+
+        /* Llamada a un metodo privado desde la propia clase: permitido */
+        resultado = duplicar(resultado);
+
+        si (condicion) {
+            imprimir("El resultado es mayor");
+        } sino {
+            imprimir("El resultado no es mayor");
+        }
+
+        /* Ciclo con condicion booleana */
+        mientras (contador < 3) {
+            contador = contador + 1;
+        }
+
+        /* 'romper' y 'continuar' dentro de un ciclo: contexto valido */
+        para (contador = 0; contador < LIMITE; contador = contador + 1) {
+            si (contador == 50) {
+                romper;
+            }
+            si (contador < 10) {
+                continuar;
+            }
+            acumulado = acumulado + contador;
+        }
+
+        /* 'romper' dentro de un 'segun': tambien es contexto valido */
+        segun (resultado) {
+            caso 1:
+                imprimir("uno");
+                romper;
+            caso 2:
+                imprimir("dos");
+                romper;
+            defecto:
+                imprimir("otro");
+        }
+
+        hacer {
+            acumulado = acumulado - 1;
+        } mientras (acumulado > 0);
+
+        /* Un metodo 'vacio' puede retornar sin expresion */
+        retornar;
+    }
+
+};

@@ -1,0 +1,11 @@
+/*
+   Caso 4: ERROR de orden.
+   Las importaciones deben ir ANTES de la clase principal.
+   El #incluir de la ultima linea llega despues de la clase.
+*/
+
+#incluir <flujo_es>
+
+clase Reporte { };
+
+#incluir <cadena_es>

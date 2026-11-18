@@ -1,0 +1,29 @@
+/*
+   PRUEBA 1: CODIGO VALIDO
+
+   Es el ejemplo del enunciado traducido a C++Es. Debe registrar en la tabla
+   de simbolos la clase, los dos atributos, la constante, los dos metodos,
+   los dos parametros y las dos variables locales, sin un solo error.
+*/
+
+#incluir <flujo_es>
+
+clase SistemaEscolar {
+
+    entero   totalAlumnos;
+    booleano sistemaAbierto = verdadero;
+
+    constante entero MAX_CALIFICACION = 100;
+
+    vacio registrar() {
+        imprimir("Registrando...");
+    }
+
+    entero calcularPromedio(entero nota1, entero nota2) {
+        entero sumaNotas = nota1 + nota2;
+        entero promedioFinal = sumaNotas / 2;
+
+        retornar promedioFinal;
+    }
+
+};

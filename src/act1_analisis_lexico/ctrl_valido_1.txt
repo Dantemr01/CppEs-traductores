@@ -1,0 +1,66 @@
+/*
+   EJECUCION 1: CODIGO VALIDO
+   Las seis estructuras de control, condiciones simples y compuestas.
+*/
+
+#incluir <flujo_es>
+
+clase Proceso {
+
+    entero edad, contador, opcion, i;
+    booleano activo, administrador;
+
+    vacio ejecutar() {
+
+        leer(edad);
+        leer(contador);
+
+        /* selectiva simple con condicion simple */
+        si (edad >= 18) {
+            imprimir("Mayor de edad");
+        }
+
+        /* selectiva simple con condicion compuesta y agrupada */
+        si ((edad >= 18 && activo) || administrador) {
+            imprimir("Acceso permitido");
+        }
+
+        /* selectiva doble */
+        si (edad >= 18) {
+            imprimir("Mayor");
+        } sino {
+            imprimir("Menor");
+        }
+
+        /* selectiva multiple */
+        segun (opcion) {
+            caso 1:
+                imprimir("Opcion uno");
+                romper;
+            caso 2:
+                imprimir("Opcion dos");
+                romper;
+            defecto:
+                imprimir("Opcion invalida");
+        }
+
+        /* iterativa con condicion al inicio */
+        mientras (contador < 10) {
+            imprimir(contador);
+            contador = contador + 1;
+        }
+
+        /* iterativa con condicion al final */
+        hacer {
+            imprimir(contador);
+            contador = contador - 1;
+        } mientras (contador > 0);
+
+        /* iterativa controlada */
+        para (i = 0; i < 5; i = i + 1) {
+            imprimir(i);
+        }
+
+    }
+
+};

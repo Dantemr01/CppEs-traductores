@@ -1,0 +1,36 @@
+/*
+   EJECUCION 3: CODIGO INVALIDO
+   Los errores que exige el enunciado para las estructuras de control.
+*/
+
+#incluir <flujo_es>
+
+clase Fallas {
+
+    vacio ejecutar() {
+
+        si edad >= 18 {
+            imprimir("Mayor");
+        }
+
+        mientras (contador < 10 {
+            contador = contador + 1;
+        }
+
+        para (i = 0; i < 10) {
+            imprimir(i);
+        }
+
+        sino {
+            imprimir("Sin si asociado");
+        }
+
+        segun (opcion) {
+            caso:
+                imprimir("Sin valor");
+                romper;
+        }
+
+    }
+
+};

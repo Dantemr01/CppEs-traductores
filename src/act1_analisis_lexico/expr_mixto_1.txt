@@ -1,0 +1,37 @@
+/*
+   EJECUCION 3: COMBINACION DE ESTRUCTURAS CORRECTAS E INCORRECTAS
+   Cada sentencia invalida va seguida de una valida, para demostrar que
+   el analizador reporta el error y CONTINUA con las siguientes.
+*/
+
+#incluir <flujo_es>
+
+clase Reporte {
+
+    entero a, b, c;
+
+    vacio calcular() {
+
+        leer(a);
+
+        leer(b c);
+
+        leer(c);
+
+        total = a + b;
+
+        promedio = a + ;
+
+        resultado = (a + b) * c;
+
+        = a - b;
+
+        activo = a && b;
+
+        imprimir(, a);
+
+        imprimir("Total:", total);
+
+    }
+
+};

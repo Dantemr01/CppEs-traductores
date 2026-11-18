@@ -20,11 +20,11 @@ clase Matriz {
     caracter c = 'A';
 
     vacio ejecutar() {
-        entero   ri;
-        flotante rf;
-        doble    rd;
-        booleano rb;
-        cadena   rs;
+        entero   ri = 0;
+        flotante rf = 0.0;
+        doble    rd = 0.0;
+        booleano rb = falso;
+        cadena   rs = "";
 
         /* ---- Filas validas de la matriz ---- */
 

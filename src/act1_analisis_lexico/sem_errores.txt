@@ -16,8 +16,8 @@ clase EvaluadorErrores {
     constante entero LIMITE = 100;
 
     vacio ejecutar() {
-        entero   a;
-        booleano b;
+        entero   a = 0;
+        booleano b = falso;
 
         /* Error 1: asignacion incompatible, cadena en una variable entera */
         a = "Hola mundo";
